@@ -1,16 +1,54 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { GraphNode } from '@/types';
+import { FaStar, FaUserCircle, FaLightbulb, FaCertificate, FaBriefcase, FaLock } from 'react-icons/fa';
 
 function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean }>) {
+  const [isClicking, setIsClicking] = useState(false);
   const currentExp = data.currentExp || data.current_exp || 0;
   const requiredExp = data.requiredExp || data.required_exp || 100;
   const progress = (currentExp / requiredExp) * 100;
   const isLocked = data.isLocked || data.is_locked || false;
   const isCenter = data.nodeType === 'center' || data.node_type === 'center';
+  const isCurrent = data.nodeType === 'current' || data.node_type === 'current';
   const isHighlighted = data.isHighlighted || false;
+  const nodeType = data.nodeType || data.node_type || 'skill';
+  const isMaxed = currentExp >= requiredExp;
+
+  // ノードタイプ別のサイズ
+  const nodeSize = isCenter ? 'w-60 h-60' : isCurrent ? 'w-40 h-40' : 'w-32 h-32';
+  const circleRadius = isCenter ? 78 : isCurrent ? 78 : 62;
+
+  // ノードタイプ別のアイコン
+  const getNodeIcon = () => {
+    if (isCenter) return <FaStar className="text-white text-3xl" />;
+    if (isCurrent) return <FaUserCircle className="text-white text-2xl" />;
+
+    switch (nodeType) {
+      case 'skill':
+        return <FaLightbulb className="text-white text-xl" />;
+      case 'cert':
+        return <FaCertificate className="text-white text-xl" />;
+      case 'position':
+        return <FaBriefcase className="text-white text-xl" />;
+      default:
+        return <FaLightbulb className="text-white text-xl" />;
+    }
+  };
+
+  const handleMouseDown = () => {
+    if (!isLocked && !isCenter) {
+      setIsClicking(true);
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (isClicking) {
+      setTimeout(() => setIsClicking(false), 600);
+    }
+  };
 
   return (
     <>
@@ -25,90 +63,138 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean }>)
             transform: scale(1.05);
           }
         }
+        @keyframes ripple {
+          0% {
+            transform: scale(0.8);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
+        }
+        @keyframes sparkle {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.1) rotate(180deg);
+          }
+        }
+        @keyframes glow {
+          0%, 100% {
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.4);
+          }
+          50% {
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 215, 0, 0.6);
+          }
+        }
       `}</style>
-    <div
-      className={`
-        relative w-32 h-32 rounded-full shadow-lg transition-all duration-300 flex items-center justify-center cursor-pointer
-        ${isHighlighted ? '' : (isLocked ? 'opacity-60 cursor-not-allowed' : 'opacity-100')}
+      <div
+        className={`
+        relative ${nodeSize} rounded-full transition-all duration-300 flex items-center justify-center
+        ${isCenter ? 'cursor-default' : isMaxed ? 'cursor-default' : 'cursor-pointer'}
+        ${isLocked ? 'cursor-not-allowed' : ''}
         ${isCenter ? 'ring-4 ring-yellow-400' : ''}
         ${isHighlighted ? 'ring-8 ring-pink-500 shadow-2xl shadow-pink-500/50' : ''}
-        ${!isLocked ? 'hover:scale-110 hover:shadow-xl active:scale-95' : ''}
+        ${isMaxed && !isCenter ? 'ring-4 ring-yellow-300' : ''}
+        ${!isLocked && !isCenter && !isMaxed ? 'hover:scale-110 hover:shadow-xl active:scale-95' : ''}
       `}
-      style={{
-        backgroundColor: data.color,
-        zIndex: isHighlighted ? 20 : 10,
-        pointerEvents: 'auto',
-        animation: isHighlighted ? 'slowPulse 2s ease-in-out infinite' : 'none',
-        opacity: isHighlighted ? undefined : (isLocked ? 0.6 : 1),
-      }}
-    >
-      {/* 中央ハンドル - 完全に非表示 */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="center"
-        className="opacity-0"
         style={{
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
+          backgroundColor: isLocked ? '#D1D5DB' : data.color,
+          zIndex: isHighlighted ? 20 : 10,
+          pointerEvents: isCenter || isMaxed ? 'none' : (isClicking ? 'none' : 'auto'),
+          animation: isHighlighted
+            ? 'slowPulse 2s ease-in-out infinite'
+            : isMaxed && !isCenter
+            ? 'glow 2s ease-in-out infinite'
+            : 'none',
+          opacity: 1,
+          boxShadow: isMaxed && !isCenter
+            ? '0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.4)'
+            : undefined,
         }}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="center"
-        className="opacity-0"
-        style={{
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-        }}
-      />
+        onContextMenu={(e) => e.preventDefault()}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        {/* クリックリップルエフェクト */}
+        {isClicking && (
+          <div
+            className="absolute inset-0 rounded-full border-4 pointer-events-none"
+            style={{
+              borderColor: 'rgba(255, 255, 255, 0.8)',
+              animation: 'ripple 0.6s ease-out',
+            }}
+          />
+        )}
+        {/* 中央ハンドル - 完全に非表示 */}
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="center"
+          className="opacity-0"
+          style={{
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="center"
+          className="opacity-0"
+          style={{
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
 
-      {/* コンテンツ */}
-      <div className="text-center px-2">
-        {/* タイトル */}
-        <h3 className="font-bold text-white text-sm mb-1 leading-tight line-clamp-2" style={{
-          textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5)',
-        }}>
-          {data.label}
-        </h3>
+        {/* コンテンツ */}
+        <div className="text-center px-2 flex flex-col items-center justify-center">
+          {/* アイコン */}
+          <div className="mb-2">
+            {getNodeIcon()}
+          </div>
 
-        {/* EXP表示 */}
-        <div className="text-xs text-white font-semibold" style={{
-          textShadow: '0 1px 2px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.5)',
-        }}>
-          {Math.floor(progress)}%
+          {/* タイトル */}
+          <h3 className="font-bold text-white text-xs leading-tight line-clamp-2">
+            {data.label}
+          </h3>
         </div>
 
-        {isCenter && <div className="text-lg mt-1">⭐</div>}
-        {isLocked && <div className="text-lg mt-1">🔒</div>}
+        {/* プログレスリング - Centerノード以外のみ表示 */}
+        {!isCenter && (
+          <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
+            <circle
+              cx="50%"
+              cy="50%"
+              r={circleRadius}
+              fill="none"
+              stroke={isLocked ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.3)"}
+              strokeWidth="3"
+            />
+            {!isLocked && (
+              <circle
+                cx="50%"
+                cy="50%"
+                r={circleRadius}
+                fill="none"
+                stroke="white"
+                strokeWidth="3"
+                strokeDasharray={`${2 * Math.PI * circleRadius}`}
+                strokeDashoffset={`${2 * Math.PI * circleRadius * (1 - progress / 100)}`}
+                className="transition-all duration-1000 ease-out"
+              />
+            )}
+          </svg>
+        )}
       </div>
-
-      {/* プログレスリング */}
-      <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
-        <circle
-          cx="50%"
-          cy="50%"
-          r="62"
-          fill="none"
-          stroke="rgba(255,255,255,0.3)"
-          strokeWidth="3"
-        />
-        <circle
-          cx="50%"
-          cy="50%"
-          r="62"
-          fill="none"
-          stroke="white"
-          strokeWidth="3"
-          strokeDasharray={`${2 * Math.PI * 62}`}
-          strokeDashoffset={`${2 * Math.PI * 62 * (1 - progress / 100)}`}
-          className="transition-all duration-1000 ease-out"
-        />
-      </svg>
-    </div>
     </>
   );
 }

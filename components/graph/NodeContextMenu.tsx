@@ -10,6 +10,7 @@ interface NodeContextMenuProps {
   onExpandTree: () => void;
   onDeleteSubtree: () => void;
   onResetProgress: () => void;
+  onCompleteInstantly: () => void;
 }
 
 export default function NodeContextMenu({
@@ -19,6 +20,7 @@ export default function NodeContextMenu({
   onExpandTree,
   onDeleteSubtree,
   onResetProgress,
+  onCompleteInstantly,
 }: NodeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -87,13 +89,25 @@ export default function NodeContextMenu({
       {/* メニューアイテム */}
       <div className="py-1 border-t border-gray-200">
         {!isLocked && (node.nodeType !== 'center' && node.node_type !== 'center') && (
-          <button
-            onClick={onExpandTree}
-            className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-md transition flex items-center gap-2 text-sm text-gray-700"
-          >
-            <span>🌱</span>
-            <span>ツリーを伸ばす</span>
-          </button>
+          <>
+            <button
+              onClick={onExpandTree}
+              className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-md transition flex items-center gap-2 text-sm text-gray-700"
+            >
+              <span>🌱</span>
+              <span>ツリーを伸ばす</span>
+            </button>
+
+            {progress < 100 && (
+              <button
+                onClick={onCompleteInstantly}
+                className="w-full text-left px-3 py-2 hover:bg-green-50 rounded-md transition flex items-center gap-2 text-sm text-green-600"
+              >
+                <span>⚡</span>
+                <span>即座に完了させる</span>
+              </button>
+            )}
+          </>
         )}
 
         {(node.nodeType !== 'center' && node.node_type !== 'center') && (

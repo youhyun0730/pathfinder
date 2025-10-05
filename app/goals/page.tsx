@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { Goal, GraphNode } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
+import Dialog from '@/components/ui/Dialog';
+import Toast from '@/components/ui/Toast';
+import LoadingScreen from '@/components/ui/LoadingScreen';
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -13,6 +16,27 @@ export default function GoalsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [nodes, setNodes] = useState<GraphNode[]>([]);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant: 'info' | 'warning' | 'error' | 'success';
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+  const [toast, setToast] = useState<{
+    isOpen: boolean;
+    message: string;
+    variant: 'info' | 'success' | 'error' | 'warning';
+  }>({
+    isOpen: false,
+    message: '',
+    variant: 'info',
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -86,14 +110,22 @@ export default function GoalsPage() {
         .single();
 
       if (!graph) {
-        alert('グラフが見つかりません');
+        setToast({
+          isOpen: true,
+          message: 'グラフが見つかりません',
+          variant: 'error',
+        });
         return;
       }
 
       // Get auth token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        alert('認証セッションが見つかりません');
+        setToast({
+          isOpen: true,
+          message: '認証セッションが見つかりません',
+          variant: 'error',
+        });
         return;
       }
 
@@ -114,7 +146,7 @@ export default function GoalsPage() {
         throw new Error('目標の生成に失敗しました');
       }
 
-      const { goal, newNodes } = await response.json();
+      const { goal, newNodes, createdNewCenter } = await response.json();
 
       // Reload goals
       const { data: goalsData } = await supabase
@@ -128,25 +160,53 @@ export default function GoalsPage() {
       }
 
       setNewGoalDescription('');
-      alert(`目標を設定しました！${newNodes || 0}個の新しいノードが追加されました。`);
+
+      let successMessage = `目標を設定しました！${newNodes || 0}個の新しいノードが追加されました。`;
+      if (createdNewCenter) {
+        successMessage += '\n新しい分野の学習ツリーが作成されました。';
+      }
+
+      setToast({
+        isOpen: true,
+        message: successMessage,
+        variant: 'success',
+      });
     } catch (error) {
       console.error('目標の送信エラー:', error);
-      alert('目標の設定に失敗しました');
+      setToast({
+        isOpen: true,
+        message: '目標の設定に失敗しました',
+        variant: 'error',
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteGoal = async (goalId: string) => {
-    if (!confirm('この目標を削除しますか？')) return;
+    setDialog({
+      isOpen: true,
+      title: '目標の削除',
+      message: 'この目標を削除しますか？',
+      variant: 'warning',
+      onConfirm: async () => {
+        await performDeleteGoal(goalId);
+      },
+    });
+  };
 
+  const performDeleteGoal = async (goalId: string) => {
     try {
       await supabase.from('goals').delete().eq('id', goalId);
 
       setGoals(prevGoals => prevGoals.filter(g => g.id !== goalId));
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      setToast({
+        isOpen: true,
+        message: '削除に失敗しました',
+        variant: 'error',
+      });
     }
   };
 
@@ -160,17 +220,7 @@ export default function GoalsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-700">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-white text-2xl"
-        >
-          読み込み中...
-        </motion.div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -306,6 +356,24 @@ export default function GoalsPage() {
           )}
         </motion.div>
       </main>
+
+      {/* カスタムダイアログ */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        onConfirm={dialog.onConfirm}
+        title={dialog.title}
+        message={dialog.message}
+        variant={dialog.variant}
+      />
+
+      {/* トースト通知 */}
+      <Toast
+        isOpen={toast.isOpen}
+        onClose={() => setToast({ ...toast, isOpen: false })}
+        message={toast.message}
+        variant={toast.variant}
+      />
     </div>
   );
 }

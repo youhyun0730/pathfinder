@@ -6,11 +6,21 @@ import { supabase } from '@/lib/supabase/client';
 import { onboardingQuestions } from '@/lib/questions';
 import QuestionCard from '@/components/onboarding/QuestionCard';
 import { OnboardingAnswer } from '@/types';
+import Toast from '@/components/ui/Toast';
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{
+    isOpen: boolean;
+    message: string;
+    variant: 'info' | 'success' | 'error' | 'warning';
+  }>({
+    isOpen: false,
+    message: '',
+    variant: 'info',
+  });
   const router = useRouter();
 
   const currentQuestion = onboardingQuestions[currentStep];
@@ -266,7 +276,11 @@ export default function OnboardingPage() {
       router.push('/graph');
     } catch (error) {
       console.error('オンボーディングエラー:', error);
-      alert('エラーが発生しました。もう一度お試しください。');
+      setToast({
+        isOpen: true,
+        message: 'エラーが発生しました。もう一度お試しください。',
+        variant: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -278,13 +292,13 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 p-4 flex flex-col items-center justify-center">
       {/* プログレスバー */}
       <div className="w-full max-w-2xl mb-8">
-        <div className="bg-white/30 rounded-full h-2 overflow-hidden">
+        <div className="bg-white/20 rounded-full h-3 overflow-hidden shadow-lg">
           <div
-            className="bg-white h-full transition-all duration-300"
+            className="bg-gradient-to-r from-yellow-400 to-yellow-200 h-full transition-all duration-500 ease-out shadow-md"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="text-white text-center mt-2">
+        <p className="text-white text-center mt-3 text-lg font-bold drop-shadow-lg">
           {currentStep + 1} / {onboardingQuestions.length}
         </p>
       </div>
@@ -318,6 +332,14 @@ export default function OnboardingPage() {
             : '次へ'}
         </button>
       </div>
+
+      {/* トースト通知 */}
+      <Toast
+        isOpen={toast.isOpen}
+        onClose={() => setToast({ ...toast, isOpen: false })}
+        message={toast.message}
+        variant={toast.variant}
+      />
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import Dialog from '@/components/ui/Dialog';
+import Toast from '@/components/ui/Toast';
 
 export default function DebugPage() {
   const [user, setUser] = useState<any>(null);
@@ -9,17 +11,50 @@ export default function DebugPage() {
   const [profile, setProfile] = useState<any>(null);
   const [error, setError] = useState<string>('');
   const [deleting, setDeleting] = useState(false);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant: 'info' | 'warning' | 'error' | 'success';
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+  const [toast, setToast] = useState<{
+    isOpen: boolean;
+    message: string;
+    variant: 'info' | 'success' | 'error' | 'warning';
+  }>({
+    isOpen: false,
+    message: '',
+    variant: 'info',
+  });
 
   const handleDeleteGraph = async () => {
     if (!user) {
-      alert('ログインしてください');
+      setToast({
+        isOpen: true,
+        message: 'ログインしてください',
+        variant: 'warning',
+      });
       return;
     }
 
-    if (!confirm('本当にスキルツリーを削除しますか？この操作は取り消せません。')) {
-      return;
-    }
+    setDialog({
+      isOpen: true,
+      title: 'スキルツリーの削除',
+      message: '本当にスキルツリーを削除しますか？この操作は取り消せません。',
+      variant: 'error',
+      onConfirm: async () => {
+        await performDeleteGraph();
+      },
+    });
+  };
 
+  const performDeleteGraph = async () => {
     setDeleting(true);
     try {
       // グラフを取得
@@ -29,7 +64,11 @@ export default function DebugPage() {
         .eq('user_id', user.id);
 
       if (!graphs || graphs.length === 0) {
-        alert('削除するグラフが見つかりません');
+        setToast({
+          isOpen: true,
+          message: '削除するグラフが見つかりません',
+          variant: 'warning',
+        });
         return;
       }
 
@@ -47,11 +86,21 @@ export default function DebugPage() {
       // プロファイルを削除
       await supabase.from('profiles').delete().eq('id', user.id);
 
-      alert('スキルツリーとプロファイルを削除しました。オンボーディングからやり直してください。');
-      window.location.href = '/onboarding';
+      setToast({
+        isOpen: true,
+        message: 'スキルツリーとプロファイルを削除しました。オンボーディングからやり直してください。',
+        variant: 'success',
+      });
+      setTimeout(() => {
+        window.location.href = '/onboarding';
+      }, 2000);
     } catch (err: any) {
       console.error('削除エラー:', err);
-      alert('削除に失敗しました: ' + err.message);
+      setToast({
+        isOpen: true,
+        message: `削除に失敗しました: ${err.message}`,
+        variant: 'error',
+      });
     } finally {
       setDeleting(false);
     }
@@ -186,6 +235,24 @@ export default function DebugPage() {
           </div>
         </div>
       </div>
+
+      {/* カスタムダイアログ */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        onConfirm={dialog.onConfirm}
+        title={dialog.title}
+        message={dialog.message}
+        variant={dialog.variant}
+      />
+
+      {/* トースト通知 */}
+      <Toast
+        isOpen={toast.isOpen}
+        onClose={() => setToast({ ...toast, isOpen: false })}
+        message={toast.message}
+        variant={toast.variant}
+      />
     </div>
   );
 }

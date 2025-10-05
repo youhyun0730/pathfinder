@@ -7,6 +7,11 @@ import { GraphNode, GraphEdge, Goal } from '@/types';
 import { calculateRadialLayout } from '@/lib/graph/layout';
 import dynamic from 'next/dynamic';
 import NodeContextMenu from '@/components/graph/NodeContextMenu';
+import UnlockCelebration from '@/components/graph/UnlockCelebration';
+import MaxExpCelebration from '@/components/graph/MaxExpCelebration';
+import Dialog from '@/components/ui/Dialog';
+import Toast from '@/components/ui/Toast';
+import LoadingScreen from '@/components/ui/LoadingScreen';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // React FlowはクライアントサイドのみでレンダリングするためにSSRを無効化
@@ -30,6 +35,29 @@ export default function GraphPage() {
   } | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [activeGoal, setActiveGoal] = useState<Goal | null>(null);
+  const [unlockedNodes, setUnlockedNodes] = useState<GraphNode[]>([]);
+  const [maxedNode, setMaxedNode] = useState<GraphNode | null>(null);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant: 'info' | 'warning' | 'error' | 'success';
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+  const [toast, setToast] = useState<{
+    isOpen: boolean;
+    message: string;
+    variant: 'info' | 'success' | 'error' | 'warning';
+  }>({
+    isOpen: false,
+    message: '',
+    variant: 'info',
+  });
   const router = useRouter();
   const searchParams = useSearchParams();
   const goalId = searchParams.get('goalId');
@@ -126,11 +154,7 @@ export default function GraphPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-        <div className="text-white text-2xl">読み込み中...</div>
-      </div>
-    );
+    return <LoadingScreen message="スキルツリーを読み込み中..." />;
   }
 
   const checkUnlocks = async (graphId: string) => {
@@ -142,7 +166,9 @@ export default function GraphPage() {
       });
 
       if (response.ok) {
-        // グラフを再読み込み
+        const { unlockedNodes: newlyUnlockedNodes } = await response.json();
+
+        // グラフを再読み込み（レイアウト再計算はしない）
         const { data: graphNodes } = await supabase
           .from('nodes')
           .select('*')
@@ -154,15 +180,29 @@ export default function GraphPage() {
           .eq('graph_id', graphId);
 
         if (graphNodes) {
-          const layoutNodes = calculateRadialLayout(
-            graphNodes as GraphNode[],
-            (graphEdges as GraphEdge[]) || []
+          // 既存のノードの位置を保持し、is_lockedのみ更新
+          setNodes(prevNodes =>
+            prevNodes.map(prevNode => {
+              const updatedNode = graphNodes.find((n: any) => n.id === prevNode.id);
+              if (updatedNode) {
+                return {
+                  ...prevNode,
+                  isLocked: updatedNode.is_locked,
+                  is_locked: updatedNode.is_locked,
+                };
+              }
+              return prevNode;
+            })
           );
-          setNodes(layoutNodes);
         }
 
         if (graphEdges) {
           setEdges(graphEdges as GraphEdge[]);
+        }
+
+        // アンロックされたノードがあれば祝福ポップアップを表示
+        if (newlyUnlockedNodes && newlyUnlockedNodes.length > 0) {
+          setUnlockedNodes(newlyUnlockedNodes);
         }
       }
     } catch (error) {
@@ -299,10 +339,18 @@ export default function GraphPage() {
         setEdges(graphEdges as GraphEdge[]);
       }
 
-      alert(`${expansion.nodes.length}個の新しいノードを追加しました！`);
+      setToast({
+        isOpen: true,
+        message: `${expansion.nodes.length}個の新しいノードを追加しました！`,
+        variant: 'success',
+      });
     } catch (error) {
       console.error('ツリー拡張エラー:', error);
-      alert('ツリーの拡張に失敗しました');
+      setToast({
+        isOpen: true,
+        message: 'ツリーの拡張に失敗しました',
+        variant: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -311,9 +359,19 @@ export default function GraphPage() {
   const handleDeleteSubtree = async () => {
     if (!contextMenu) return;
 
-    if (!confirm(`「${contextMenu.node.label}」とその子孫ノードを削除しますか？\nこの操作は取り消せません。`)) {
-      return;
-    }
+    setDialog({
+      isOpen: true,
+      title: 'ツリーの削除',
+      message: `「${contextMenu.node.label}」とその子孫ノードを削除しますか？\nこの操作は取り消せません。`,
+      variant: 'warning',
+      onConfirm: async () => {
+        await performDeleteSubtree();
+      },
+    });
+  };
+
+  const performDeleteSubtree = async () => {
+    if (!contextMenu) return;
 
     try {
       // 子孫ノードを再帰的に取得
@@ -345,26 +403,67 @@ export default function GraphPage() {
         await supabase.from('nodes').delete().eq('id', nodeId);
       }
 
-      // 画面を更新
-      setNodes(prevNodes => prevNodes.filter(n => !nodesToDelete.has(n.id)));
-      setEdges(prevEdges => prevEdges.filter(e =>
-        !nodesToDelete.has(e.sourceId || e.source_id || e.fromNodeId || e.from_node_id || '') &&
-        !nodesToDelete.has(e.targetId || e.target_id || e.toNodeId || e.to_node_id || '')
-      ));
+      // グラフIDを取得
+      const { data: graph } = await supabase
+        .from('graphs')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('version', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!graph) throw new Error('グラフが見つかりません');
+
+      // グラフを再読み込みしてレイアウト再計算
+      const { data: graphNodes } = await supabase
+        .from('nodes')
+        .select('*')
+        .eq('graph_id', graph.id);
+
+      const { data: graphEdges } = await supabase
+        .from('edges')
+        .select('*')
+        .eq('graph_id', graph.id);
+
+      if (graphNodes) {
+        const layoutNodes = calculateRadialLayout(
+          graphNodes as GraphNode[],
+          (graphEdges as GraphEdge[]) || []
+        );
+        setNodes(layoutNodes);
+      }
+
+      if (graphEdges) {
+        setEdges(graphEdges as GraphEdge[]);
+      }
 
       setContextMenu(null);
     } catch (error) {
       console.error('削除エラー:', error);
-      alert('削除に失敗しました');
+      setToast({
+        isOpen: true,
+        message: '削除に失敗しました',
+        variant: 'error',
+      });
     }
   };
 
   const handleResetProgress = async () => {
     if (!contextMenu) return;
 
-    if (!confirm(`「${contextMenu.node.label}」の進捗を初期化しますか？`)) {
-      return;
-    }
+    setDialog({
+      isOpen: true,
+      title: '進捗の初期化',
+      message: `「${contextMenu.node.label}」の進捗を初期化しますか？`,
+      variant: 'warning',
+      onConfirm: async () => {
+        await performResetProgress();
+      },
+    });
+  };
+
+  const performResetProgress = async () => {
+    if (!contextMenu) return;
 
     try {
       await supabase
@@ -384,17 +483,96 @@ export default function GraphPage() {
       setContextMenu(null);
     } catch (error) {
       console.error('初期化エラー:', error);
-      alert('初期化に失敗しました');
+      setToast({
+        isOpen: true,
+        message: '初期化に失敗しました',
+        variant: 'error',
+      });
+    }
+  };
+
+  const handleCompleteInstantly = async () => {
+    if (!contextMenu) return;
+
+    setDialog({
+      isOpen: true,
+      title: '即座に完了',
+      message: `「${contextMenu.node.label}」を即座に完了させますか？`,
+      variant: 'info',
+      onConfirm: async () => {
+        await performCompleteInstantly();
+      },
+    });
+  };
+
+  const performCompleteInstantly = async () => {
+    if (!contextMenu) return;
+
+    const requiredExp = contextMenu.node.requiredExp || contextMenu.node.required_exp || 100;
+
+    try {
+      await supabase
+        .from('nodes')
+        .update({ current_exp: requiredExp })
+        .eq('id', contextMenu.node.id);
+
+      // 画面を更新
+      setNodes(prevNodes =>
+        prevNodes.map(n =>
+          n.id === contextMenu.node.id
+            ? { ...n, currentExp: requiredExp, current_exp: requiredExp }
+            : n
+        )
+      );
+
+      // カンスト祝福ポップアップを表示
+      setMaxedNode({
+        ...contextMenu.node,
+        currentExp: requiredExp,
+        current_exp: requiredExp,
+      });
+
+      setContextMenu(null);
+
+      // アンロックチェック
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+
+      if (currentUser) {
+        const { data: graph } = await supabase
+          .from('graphs')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .order('version', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (graph) {
+          await checkUnlocks(graph.id);
+        }
+      }
+    } catch (error) {
+      console.error('即座完了エラー:', error);
+      setToast({
+        isOpen: true,
+        message: '完了処理に失敗しました',
+        variant: 'error',
+      });
     }
   };
 
   const handleNodeClick = async (node: GraphNode) => {
     const isLocked = node.isLocked || node.is_locked;
+    const currentExp = node.currentExp || node.current_exp || 0;
+    const requiredExp = node.requiredExp || node.required_exp || 100;
+    const isMaxed = currentExp >= requiredExp;
 
     console.log('ノードクリック:', {
       label: node.label,
       id: node.id,
       isLocked,
+      isMaxed,
       node
     });
 
@@ -403,11 +581,17 @@ export default function GraphPage() {
       return;
     }
 
+    if (isMaxed) {
+      console.log('EXPカンスト済みです:', node.label);
+      return;
+    }
+
     try {
       console.log('API呼び出し開始:', `/api/nodes/${node.id}/increment-exp`);
 
       const response = await fetch(`/api/nodes/${node.id}/increment-exp`, {
         method: 'POST',
+        cache: 'no-store'
       });
 
       console.log('APIレスポンス:', response.status, response.statusText);
@@ -420,6 +604,10 @@ export default function GraphPage() {
 
       const { node: updatedNode, expGain } = await response.json();
       console.log('EXP増加成功:', { expGain, newExp: updatedNode.current_exp });
+
+      // カンストチェック
+      const wasMaxed = currentExp >= requiredExp;
+      const nowMaxed = updatedNode.current_exp >= updatedNode.required_exp;
 
       // ノードを更新
       setNodes(prevNodes =>
@@ -436,22 +624,35 @@ export default function GraphPage() {
 
       console.log(`${node.label} +${expGain} EXP!`);
 
+      // カンストした場合は祝福ポップアップを表示
+      if (!wasMaxed && nowMaxed) {
+        setMaxedNode({
+          ...node,
+          currentExp: updatedNode.current_exp,
+          current_exp: updatedNode.current_exp,
+        });
+      }
+
       // ロックチェック（親ノードが50%達成したら子をアンロック）
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
+      // 進捗が50%以上の場合のみチェックを実行
+      const currentProgress = (updatedNode.current_exp / updatedNode.required_exp) * 100;
+      if (currentProgress >= 50) {
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser();
 
-      if (currentUser) {
-        const { data: graph } = await supabase
-          .from('graphs')
-          .select('id')
-          .eq('user_id', currentUser.id)
-          .order('version', { ascending: false })
-          .limit(1)
-          .single();
+        if (currentUser) {
+          const { data: graph } = await supabase
+            .from('graphs')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .order('version', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (graph) {
-          await checkUnlocks(graph.id);
+          if (graph) {
+            await checkUnlocks(graph.id);
+          }
         }
       }
     } catch (error) {
@@ -512,6 +713,7 @@ export default function GraphPage() {
             onExpandTree={handleExpandTree}
             onDeleteSubtree={handleDeleteSubtree}
             onResetProgress={handleResetProgress}
+            onCompleteInstantly={handleCompleteInstantly}
           />
         )}
 
@@ -546,6 +748,40 @@ export default function GraphPage() {
             <p>👆 ノードをクリックしてEXP獲得</p>
           </div>
         </motion.div>
+
+        {/* アンロック祝福ポップアップ */}
+        {unlockedNodes.length > 0 && (
+          <UnlockCelebration
+            unlockedNodes={unlockedNodes}
+            onClose={() => setUnlockedNodes([])}
+          />
+        )}
+
+        {/* カンスト祝福ポップアップ */}
+        {maxedNode && (
+          <MaxExpCelebration
+            node={maxedNode}
+            onClose={() => setMaxedNode(null)}
+          />
+        )}
+
+        {/* カスタムダイアログ */}
+        <Dialog
+          isOpen={dialog.isOpen}
+          onClose={() => setDialog({ ...dialog, isOpen: false })}
+          onConfirm={dialog.onConfirm}
+          title={dialog.title}
+          message={dialog.message}
+          variant={dialog.variant}
+        />
+
+        {/* トースト通知 */}
+        <Toast
+          isOpen={toast.isOpen}
+          onClose={() => setToast({ ...toast, isOpen: false })}
+          message={toast.message}
+          variant={toast.variant}
+        />
       </main>
     </div>
   );

@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
 
     // 各ノードのロック状態をチェック
     const updates: { id: string; is_locked: boolean }[] = [];
+    const unlockedNodes: any[] = [];
 
     for (const node of nodes) {
       // 中心ノードと現在地ノードは常にアンロック
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest) {
         // 親がない場合はアンロック
         if (node.is_locked) {
           updates.push({ id: node.id, is_locked: false });
+          unlockedNodes.push(node);
         }
         continue;
       }
@@ -85,6 +87,7 @@ export async function POST(request: NextRequest) {
       if (parentProgress >= 50) {
         if (node.is_locked) {
           updates.push({ id: node.id, is_locked: false });
+          unlockedNodes.push(node);
         }
       } else {
         if (!node.is_locked) {
@@ -104,6 +107,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       updatedCount: updates.length,
+      unlockedNodes,
     });
   } catch (error: any) {
     console.error('ロックチェックエラー:', error);
