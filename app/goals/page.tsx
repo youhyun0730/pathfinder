@@ -286,12 +286,6 @@ export default function GoalsPage() {
               {submitting ? '生成中...' : '目標を設定'}
             </button>
           </form>
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              💡 AIがあなたの目標に基づいて、達成までの推奨パスを自動生成します。
-              必要に応じて新しいスキルノードがツリーに追加されます。
-            </p>
-          </div>
         </motion.div>
 
         {/* Goals List */}
@@ -325,14 +319,6 @@ export default function GoalsPage() {
                         <h3 className="text-lg font-semibold text-gray-800 mb-2">
                           {goal.description}
                         </h3>
-                        <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-                          <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full">
-                            推奨パス: {goal.recommendedPath?.length || 0}ステップ
-                          </span>
-                          <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full">
-                            {new Date(goal.createdAt).toLocaleDateString('ja-JP')}
-                          </span>
-                        </div>
                       </div>
                       <div className="flex gap-2 w-full sm:w-auto">
                         <button

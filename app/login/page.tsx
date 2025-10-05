@@ -12,13 +12,7 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const router = useRouter();
-
-  const addDebug = (msg: string) => {
-    console.log(msg);
-    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
-  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,21 +43,13 @@ export default function LoginPage() {
         }
       } else {
         // ログイン
-        addDebug(`ログイン試行: ${email}`);
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        addDebug(`ログインレスポンス: ${JSON.stringify({
-          hasUser: !!data.user,
-          hasError: !!error,
-          errorMsg: error?.message
-        })}`);
-
         if (error) {
           // より詳細なエラーメッセージ
-          addDebug(`ログインエラー: ${error.message}`);
           if (error.message.includes('Invalid login credentials')) {
             throw new Error('メールアドレスまたはパスワードが正しくありません');
           } else if (error.message.includes('Email not confirmed')) {
@@ -73,39 +59,27 @@ export default function LoginPage() {
         }
 
         if (data.user) {
-          addDebug(`✅ ログイン成功: ${data.user.email} (UserID: ${data.user.id})`);
           setMessage('ログイン成功！リダイレクト中...');
 
           // 少し待ってからプロファイルチェック
           await new Promise(resolve => setTimeout(resolve, 1000));
 
           // プロファイルの存在チェック
-          addDebug('プロファイルをチェック中...');
           const { data: profiles, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', data.user.id);
 
-          addDebug(`プロファイル結果: ${JSON.stringify({
-            count: profiles?.length || 0,
-            hasProfile: profiles && profiles.length > 0,
-            errorCode: profileError?.code,
-            errorMsg: profileError?.message
-          })}`);
-
           if (profileError) {
-            addDebug(`プロファイルエラー: ${profileError.message}`);
             throw new Error('プロファイルの取得に失敗しました: ' + profileError.message);
           }
 
           if (profiles && profiles.length > 0) {
             // プロファイルがある = オンボーディング済み
-            addDebug('→ グラフページへリダイレクト');
             await new Promise(resolve => setTimeout(resolve, 500));
             window.location.href = '/graph';
           } else {
             // プロファイルがない = オンボーディングへ
-            addDebug('→ オンボーディングへリダイレクト');
             await new Promise(resolve => setTimeout(resolve, 500));
             window.location.href = '/onboarding';
           }
@@ -215,24 +189,6 @@ export default function LoginPage() {
             ← トップページに戻る
           </a>
         </div>
-
-        {/* デバッグ情報 */}
-        {debugInfo.length > 0 && (
-          <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-            <h3 className="font-bold text-sm text-gray-700 mb-2">デバッグログ:</h3>
-            <div className="space-y-1 text-xs text-gray-600 max-h-40 overflow-y-auto font-mono">
-              {debugInfo.map((info, i) => (
-                <div key={i}>{info}</div>
-              ))}
-            </div>
-            <button
-              onClick={() => setDebugInfo([])}
-              className="mt-2 text-xs text-gray-500 hover:text-gray-700"
-            >
-              クリア
-            </button>
-          </div>
-        )}
       </motion.div>
     </div>
   );

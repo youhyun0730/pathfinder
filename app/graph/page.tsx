@@ -722,14 +722,10 @@ export default function GraphPage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="absolute top-4 left-4 bg-white/90 backdrop-blur-md rounded-lg shadow-lg p-4 max-w-xs"
+          className="absolute top-4 left-4 bg-white/50 backdrop-blur-md rounded-lg shadow-lg p-4 max-w-xs"
         >
-          <h3 className="font-bold text-gray-800 mb-2">スキルツリー</h3>
-          <p className="text-sm text-gray-600 mb-2">
-            {nodes.length}個のノードを表示中
-          </p>
           {activeGoal && (
-            <div className="mb-2 p-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded text-xs">
+            <div className="mb-2 p-2 bg-gradient-to-r from-purple-100/80 to-pink-100/80 rounded text-xs">
               <p className="font-semibold text-purple-800">🎯 目標: {activeGoal.description}</p>
               <button
                 onClick={() => {
@@ -742,10 +738,8 @@ export default function GraphPage() {
               </button>
             </div>
           )}
-          <div className="text-xs text-gray-500 space-y-1">
-            <p>🖱️ ドラッグでパン移動</p>
-            <p>🔍 スクロールでズーム</p>
-            <p>👆 ノードをクリックしてEXP獲得</p>
+          <div className="text-sm text-gray-700">
+            <p>👆 スキルをクリックして成長させよう!</p>
           </div>
         </motion.div>
 

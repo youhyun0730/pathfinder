@@ -25,3 +25,10 @@ body {
     text-wrap: balance;
   }
 }
+
+/* ミニマップをモバイルでは非表示 */
+@media (max-width: 768px) {
+  .react-flow__minimap {
+    display: none !important;
+  }
+}

@@ -5,7 +5,6 @@ import ReactFlow, {
   Node,
   Edge,
   Background,
-  Controls,
   MiniMap,
   useNodesState,
   useEdgesState,
@@ -128,7 +127,6 @@ export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNo
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#e2e8f0" />
-        <Controls />
         <MiniMap
           nodeColor={(node) => {
             const graphNode = node.data as GraphNode;
