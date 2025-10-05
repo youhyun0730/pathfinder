@@ -10,9 +10,13 @@ export interface GraphNode {
   description: string;
   requiredExp: number;
   currentExp: number;
+  isLocked?: boolean;
   parentIds: string[];
   positionX: number;
   positionY: number;
+  position?: { x: number; y: number }; // layout.tsで使用される一時的なプロパティ
+  vx?: number; // 力指向レイアウトで使用
+  vy?: number; // 力指向レイアウトで使用
   color: string;
   metadata?: {
     suggestedResources?: string[];

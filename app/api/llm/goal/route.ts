@@ -259,6 +259,14 @@ ${nodesSummary}
       }
     }
 
+    // startingNodeが必ず存在することを保証
+    if (!startingNode) {
+      return NextResponse.json(
+        { error: '起点ノードが見つかりません' },
+        { status: 404 }
+      );
+    }
+
     // Build recommended path starting from the starting node
     const recommendedPath: string[] = [startingNode.id];
     const colorMap: Record<string, string> = {

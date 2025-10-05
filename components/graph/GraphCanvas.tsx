@@ -32,7 +32,7 @@ export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNo
     return graphNodes.map((node) => ({
       id: node.id,
       type: 'skillNode',
-      position: node.position,
+      position: { x: node.positionX, y: node.positionY },
       data: {
         ...node,
         isHighlighted: node.id === highlightedNodeId,
@@ -43,8 +43,8 @@ export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNo
   // GraphEdgeをReact Flow Edgeに変換
   const initialEdges: Edge[] = useMemo(() => {
     return graphEdges.map((edge) => {
-      const sourceId = edge.sourceId || edge.source_id || edge.fromNodeId || edge.from_node_id;
-      const targetId = edge.targetId || edge.target_id || edge.toNodeId || edge.to_node_id;
+      const sourceId = edge.fromNodeId;
+      const targetId = edge.toNodeId;
 
       return {
         id: edge.id,

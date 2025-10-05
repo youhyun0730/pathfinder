@@ -7,14 +7,14 @@ import { FaStar, FaUserCircle, FaLightbulb, FaCertificate, FaBriefcase } from 'r
 
 function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean }>) {
   const [isClicking, setIsClicking] = useState(false);
-  const currentExp = data.currentExp || data.current_exp || 0;
-  const requiredExp = data.requiredExp || data.required_exp || 100;
+  const currentExp = data.currentExp || 0;
+  const requiredExp = data.requiredExp || 100;
   const progress = (currentExp / requiredExp) * 100;
-  const isLocked = data.isLocked || data.is_locked || false;
-  const isCenter = data.nodeType === 'center' || data.node_type === 'center';
-  const isCurrent = data.nodeType === 'current' || data.node_type === 'current';
+  const isLocked = data.isLocked || false;
+  const isCenter = data.nodeType === 'center';
+  const isCurrent = data.nodeType === 'current';
   const isHighlighted = data.isHighlighted || false;
-  const nodeType = data.nodeType || data.node_type || 'skill';
+  const nodeType = data.nodeType || 'skill';
   const isMaxed = currentExp >= requiredExp;
 
   // ノードタイプ別のサイズ

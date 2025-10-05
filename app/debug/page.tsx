@@ -55,6 +55,15 @@ export default function DebugPage() {
   };
 
   const performDeleteGraph = async () => {
+    if (!user) {
+      setToast({
+        isOpen: true,
+        message: 'ユーザー情報が見つかりません',
+        variant: 'error',
+      });
+      return;
+    }
+
     setDeleting(true);
     try {
       // グラフを取得

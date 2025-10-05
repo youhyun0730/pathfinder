@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { GraphNode, GraphEdge, Goal } from '@/types';
@@ -24,7 +24,7 @@ const GraphCanvas = dynamic(() => import('@/components/graph/GraphCanvas'), {
   ),
 });
 
-export default function GraphPage() {
+function GraphContent() {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -227,6 +227,15 @@ export default function GraphPage() {
     const node = contextMenu.node;
     setContextMenu(null);
 
+    if (!user) {
+      setToast({
+        isOpen: true,
+        message: 'ユーザー情報が見つかりません',
+        variant: 'error',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -246,7 +255,7 @@ export default function GraphPage() {
         body: JSON.stringify({
           nodeLabel: node.label,
           nodeDescription: node.description,
-          nodeType: node.nodeType || node.node_type,
+          nodeType: node.nodeType,
           category,
         }),
       });
@@ -370,7 +379,7 @@ export default function GraphPage() {
   };
 
   const performDeleteSubtree = async () => {
-    if (!contextMenu) return;
+    if (!contextMenu || !user) return;
 
     try {
       // 子孫ノードを再帰的に取得
@@ -380,11 +389,11 @@ export default function GraphPage() {
       while (queue.length > 0) {
         const nodeId = queue.shift()!;
         const childEdges = edges.filter(e =>
-          (e.sourceId || e.source_id || e.fromNodeId || e.from_node_id) === nodeId
+          e.fromNodeId === nodeId
         );
 
         childEdges.forEach(edge => {
-          const childId = edge.targetId || edge.target_id || edge.toNodeId || edge.to_node_id;
+          const childId = edge.toNodeId;
           if (!nodesToDelete.has(childId)) {
             nodesToDelete.add(childId);
             queue.push(childId);
@@ -393,12 +402,12 @@ export default function GraphPage() {
       }
 
       // エッジを削除
-      for (const nodeId of nodesToDelete) {
+      for (const nodeId of Array.from(nodesToDelete)) {
         await supabase.from('edges').delete().or(`from_node_id.eq.${nodeId},to_node_id.eq.${nodeId}`);
       }
 
       // ノードを削除
-      for (const nodeId of nodesToDelete) {
+      for (const nodeId of Array.from(nodesToDelete)) {
         await supabase.from('nodes').delete().eq('id', nodeId);
       }
 
@@ -507,7 +516,7 @@ export default function GraphPage() {
   const performCompleteInstantly = async () => {
     if (!contextMenu) return;
 
-    const requiredExp = contextMenu.node.requiredExp || contextMenu.node.required_exp || 100;
+    const requiredExp = contextMenu.node.requiredExp || 100;
 
     try {
       await supabase
@@ -519,7 +528,7 @@ export default function GraphPage() {
       setNodes(prevNodes =>
         prevNodes.map(n =>
           n.id === contextMenu.node.id
-            ? { ...n, currentExp: requiredExp, current_exp: requiredExp }
+            ? { ...n, currentExp: requiredExp }
             : n
         )
       );
@@ -528,7 +537,6 @@ export default function GraphPage() {
       setMaxedNode({
         ...contextMenu.node,
         currentExp: requiredExp,
-        current_exp: requiredExp,
       });
 
       setContextMenu(null);
@@ -562,9 +570,9 @@ export default function GraphPage() {
   };
 
   const handleNodeClick = async (node: GraphNode) => {
-    const isLocked = node.isLocked || node.is_locked;
-    const currentExp = node.currentExp || node.current_exp || 0;
-    const requiredExp = node.requiredExp || node.required_exp || 100;
+    const isLocked = node.isLocked;
+    const currentExp = node.currentExp || 0;
+    const requiredExp = node.requiredExp || 100;
     const isMaxed = currentExp >= requiredExp;
 
     console.log('ノードクリック:', {
@@ -628,7 +636,6 @@ export default function GraphPage() {
         setMaxedNode({
           ...node,
           currentExp: updatedNode.current_exp,
-          current_exp: updatedNode.current_exp,
         });
       }
 
@@ -777,5 +784,13 @@ export default function GraphPage() {
         />
       </main>
     </div>
+  );
+}
+
+export default function GraphPage() {
+  return (
+    <Suspense fallback={<LoadingScreen message="スキルツリーを読み込み中..." />}>
+      <GraphContent />
+    </Suspense>
   );
 }

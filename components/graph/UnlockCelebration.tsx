@@ -73,7 +73,7 @@ export default function UnlockCelebration({ unlockedNodes, onClose }: UnlockCele
                   className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
                 >
                   <div className="flex-shrink-0">
-                    {getNodeIcon(node.nodeType || node.node_type || 'skill')}
+                    {getNodeIcon(node.nodeType || 'skill')}
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-800">{node.label}</h3>

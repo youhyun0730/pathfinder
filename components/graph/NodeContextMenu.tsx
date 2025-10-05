@@ -36,9 +36,9 @@ export default function NodeContextMenu({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  const isLocked = node.isLocked || node.is_locked;
-  const currentExp = node.currentExp || node.current_exp || 0;
-  const requiredExp = node.requiredExp || node.required_exp || 100;
+  const isLocked = node.isLocked;
+  const currentExp = node.currentExp || 0;
+  const requiredExp = node.requiredExp || 100;
   const progress = (currentExp / requiredExp) * 100;
 
   return (
@@ -58,7 +58,7 @@ export default function NodeContextMenu({
             style={{ backgroundColor: node.color }}
           />
           <span className="text-xs font-semibold text-gray-500 uppercase">
-            {node.nodeType || node.node_type}
+            {node.nodeType}
           </span>
           {isLocked && <span className="text-xs">🔒</span>}
         </div>
@@ -88,7 +88,7 @@ export default function NodeContextMenu({
 
       {/* メニューアイテム */}
       <div className="py-1 border-t border-gray-200">
-        {!isLocked && (node.nodeType !== 'center' && node.node_type !== 'center') && (
+        {!isLocked && node.nodeType !== 'center' && (
           <>
             <button
               onClick={onExpandTree}
@@ -110,7 +110,7 @@ export default function NodeContextMenu({
           </>
         )}
 
-        {(node.nodeType !== 'center' && node.node_type !== 'center') && (
+        {node.nodeType !== 'center' && (
           <>
             <button
               onClick={onDeleteSubtree}

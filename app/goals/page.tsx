@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { Goal, GraphNode } from '@/types';
+import { Goal } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import Dialog from '@/components/ui/Dialog';
 import Toast from '@/components/ui/Toast';
@@ -73,14 +73,10 @@ export default function GoalsPage() {
           .single();
 
         if (graph) {
-          const { data: graphNodes } = await supabase
+          await supabase
             .from('nodes')
             .select('*')
             .eq('graph_id', graph.id);
-
-          if (graphNodes) {
-            setNodes(graphNodes as GraphNode[]);
-          }
         }
       } catch (error) {
         console.error('目標の読み込みエラー:', error);
