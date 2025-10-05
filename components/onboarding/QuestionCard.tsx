@@ -13,12 +13,18 @@ export default function QuestionCard({ question, value, onChange }: QuestionCard
     switch (question.type) {
       case 'text':
         return (
-          <textarea
-            value={value as string}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={question.placeholder}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition resize-none h-32"
-          />
+          <div>
+            <textarea
+              value={value as string}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={question.placeholder}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition resize-none h-32 text-gray-900 placeholder:text-gray-400"
+              maxLength={1000}
+            />
+            <div className="mt-1 text-xs text-gray-500 text-right">
+              {(value as string)?.length || 0} / 1000
+            </div>
+          </div>
         );
 
       case 'select':
@@ -29,8 +35,8 @@ export default function QuestionCard({ question, value, onChange }: QuestionCard
                 key={option}
                 className={`block p-4 border rounded-lg cursor-pointer transition ${
                   value === option
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-300 hover:border-purple-300'
+                    ? 'border-purple-500 bg-purple-50 text-gray-900'
+                    : 'border-gray-300 hover:border-purple-300 text-gray-700'
                 }`}
               >
                 <input
@@ -55,8 +61,8 @@ export default function QuestionCard({ question, value, onChange }: QuestionCard
                 key={option}
                 className={`block p-4 border rounded-lg cursor-pointer transition ${
                   (value as string[]).includes(option)
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-300 hover:border-purple-300'
+                    ? 'border-purple-500 bg-purple-50 text-gray-900'
+                    : 'border-gray-300 hover:border-purple-300 text-gray-700'
                 }`}
               >
                 <input

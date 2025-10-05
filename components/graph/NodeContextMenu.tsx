@@ -117,9 +117,6 @@ export default function NodeContextMenu({
         )}
       </div>
 
-      <div className="px-3 py-1 text-xs text-gray-400 border-t border-gray-200 mt-1">
-        右クリックでメニューを表示
-      </div>
     </div>
   );
 }

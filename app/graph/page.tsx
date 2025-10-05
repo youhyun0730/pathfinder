@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { GraphNode, GraphEdge } from '@/types';
+import { GraphNode, GraphEdge, Goal } from '@/types';
 import { calculateRadialLayout } from '@/lib/graph/layout';
 import dynamic from 'next/dynamic';
 import NodeContextMenu from '@/components/graph/NodeContextMenu';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // React FlowはクライアントサイドのみでレンダリングするためにSSRを無効化
 const GraphCanvas = dynamic(() => import('@/components/graph/GraphCanvas'), {
@@ -28,7 +29,10 @@ export default function GraphPage() {
     position: { x: number; y: number };
   } | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [activeGoal, setActiveGoal] = useState<Goal | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const goalId = searchParams.get('goalId');
 
   useEffect(() => {
     const loadGraph = async () => {
@@ -83,6 +87,29 @@ export default function GraphPage() {
         if (graphEdges) {
           setEdges(graphEdges as GraphEdge[]);
         }
+
+        // Load goal if goalId is provided
+        if (goalId) {
+          const { data: goalData } = await supabase
+            .from('goals')
+            .select('*')
+            .eq('id', goalId)
+            .single();
+
+          if (goalData) {
+            // Convert snake_case to camelCase
+            const goal = {
+              id: goalData.id,
+              userId: goalData.user_id,
+              description: goalData.description,
+              targetNodeId: goalData.target_node_id,
+              recommendedPath: goalData.recommended_path,
+              createdAt: goalData.created_at,
+            } as Goal;
+
+            setActiveGoal(goal);
+          }
+        }
       } catch (error) {
         console.error('グラフの読み込みエラー:', error);
       } finally {
@@ -91,7 +118,7 @@ export default function GraphPage() {
     };
 
     loadGraph();
-  }, [router]);
+  }, [router, goalId]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -226,8 +253,6 @@ export default function GraphPage() {
           required_exp: newNodeData.requiredExp,
           current_exp: 0,
           parent_ids: [parentId],
-          position_x: 0, // 仮の位置（calculateRadialLayoutで再計算される）
-          position_y: 0,
           color: colorMap[newNodeData.nodeType] || '#4A90E2',
           is_locked: true,
           metadata: { suggestedResources: newNodeData.suggestedResources || [] },
@@ -364,15 +389,28 @@ export default function GraphPage() {
   };
 
   const handleNodeClick = async (node: GraphNode) => {
-    if (node.isLocked) {
+    const isLocked = node.isLocked || node.is_locked;
+
+    console.log('ノードクリック:', {
+      label: node.label,
+      id: node.id,
+      isLocked,
+      node
+    });
+
+    if (isLocked) {
       console.log('ロックされたノードです:', node.label);
       return;
     }
 
     try {
+      console.log('API呼び出し開始:', `/api/nodes/${node.id}/increment-exp`);
+
       const response = await fetch(`/api/nodes/${node.id}/increment-exp`, {
         method: 'POST',
       });
+
+      console.log('APIレスポンス:', response.status, response.statusText);
 
       if (!response.ok) {
         const error = await response.json();
@@ -381,6 +419,7 @@ export default function GraphPage() {
       }
 
       const { node: updatedNode, expGain } = await response.json();
+      console.log('EXP増加成功:', { expGain, newExp: updatedNode.current_exp });
 
       // ノードを更新
       setNodes(prevNodes =>
@@ -424,13 +463,19 @@ export default function GraphPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex flex-col">
       {/* ヘッダー */}
       <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-2xl font-bold text-white">Pathfinder</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-white text-sm">{user?.email}</span>
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            <button
+              onClick={() => router.push('/goals')}
+              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition text-sm font-medium"
+            >
+              🎯 目標設定
+            </button>
+            <span className="text-white text-sm hidden sm:block">{user?.email}</span>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition"
+              className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition text-sm"
             >
               ログアウト
             </button>
@@ -447,6 +492,9 @@ export default function GraphPage() {
               edges={edges}
               onNodeClick={handleNodeClick}
               onNodeLongPress={handleNodeLongPress}
+              highlightedNodeId={activeGoal?.targetNodeId}
+              onPaneClick={handleContextMenuClose}
+              onMove={handleContextMenuClose}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -468,17 +516,36 @@ export default function GraphPage() {
         )}
 
         {/* フローティング情報パネル */}
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md rounded-lg shadow-lg p-4 max-w-xs">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="absolute top-4 left-4 bg-white/90 backdrop-blur-md rounded-lg shadow-lg p-4 max-w-xs"
+        >
           <h3 className="font-bold text-gray-800 mb-2">スキルツリー</h3>
           <p className="text-sm text-gray-600 mb-2">
             {nodes.length}個のノードを表示中
           </p>
+          {activeGoal && (
+            <div className="mb-2 p-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded text-xs">
+              <p className="font-semibold text-purple-800">🎯 目標: {activeGoal.description}</p>
+              <button
+                onClick={() => {
+                  setActiveGoal(null);
+                  router.push('/graph');
+                }}
+                className="mt-2 text-xs text-purple-700 hover:text-purple-900 underline"
+              >
+                ハイライトを解除
+              </button>
+            </div>
+          )}
           <div className="text-xs text-gray-500 space-y-1">
             <p>🖱️ ドラッグでパン移動</p>
             <p>🔍 スクロールでズーム</p>
             <p>👆 ノードをクリックしてEXP獲得</p>
           </div>
-        </div>
+        </motion.div>
       </main>
     </div>
   );

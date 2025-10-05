@@ -22,9 +22,12 @@ interface GraphCanvasProps {
   edges: GraphEdge[];
   onNodeClick?: (node: GraphNode) => void;
   onNodeLongPress?: (node: GraphNode, event: React.MouseEvent) => void;
+  highlightedNodeId?: string; // Single node ID to highlight (goal node)
+  onPaneClick?: () => void;
+  onMove?: () => void;
 }
 
-export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNodeClick, onNodeLongPress }: GraphCanvasProps) {
+export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNodeClick, onNodeLongPress, highlightedNodeId, onPaneClick, onMove }: GraphCanvasProps) {
   // GraphNodeをReact Flow Nodeに変換
   const initialNodes: Node[] = useMemo(() => {
     return graphNodes.map((node) => ({
@@ -33,27 +36,33 @@ export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNo
       position: node.position,
       data: {
         ...node,
+        isHighlighted: node.id === highlightedNodeId,
       },
     }));
-  }, [graphNodes]);
+  }, [graphNodes, highlightedNodeId]);
 
   // GraphEdgeをReact Flow Edgeに変換
   const initialEdges: Edge[] = useMemo(() => {
-    return graphEdges.map((edge) => ({
-      id: edge.id,
-      source: edge.sourceId || edge.source_id || edge.fromNodeId || edge.from_node_id,
-      target: edge.targetId || edge.target_id || edge.toNodeId || edge.to_node_id,
-      sourceHandle: null, // 中央から接続
-      targetHandle: null, // 中央に接続
-      type: 'straight',
-      animated: false,
-      style: {
-        stroke: '#ffffff',
-        strokeWidth: 3,
-        strokeOpacity: 0.7,
-      },
-      zIndex: -1, // ノードの後ろに配置
-    }));
+    return graphEdges.map((edge) => {
+      const sourceId = edge.sourceId || edge.source_id || edge.fromNodeId || edge.from_node_id;
+      const targetId = edge.targetId || edge.target_id || edge.toNodeId || edge.to_node_id;
+
+      return {
+        id: edge.id,
+        source: sourceId,
+        target: targetId,
+        sourceHandle: null, // 中央から接続
+        targetHandle: null, // 中央に接続
+        type: 'straight',
+        animated: false,
+        style: {
+          stroke: '#ffffff',
+          strokeWidth: 3,
+          strokeOpacity: 0.7,
+        },
+        zIndex: -1,
+      };
+    });
   }, [graphEdges]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -88,6 +97,7 @@ export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNo
     [onNodeLongPress]
   );
 
+
   // カスタムノードタイプの定義
   const nodeTypes = useMemo(
     () => ({
@@ -106,6 +116,8 @@ export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNo
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
         onNodeContextMenu={handleNodeContextMenu}
+        onPaneClick={onPaneClick}
+        onMove={onMove}
         nodeTypes={nodeTypes}
         nodesDraggable={false}
         nodesConnectable={false}
