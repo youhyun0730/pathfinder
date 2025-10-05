@@ -665,7 +665,7 @@ export default function GraphPage() {
       {/* ヘッダー */}
       <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
         <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl font-bold text-white">Pathfinder</h1>
+          <h1 className="text-2xl font-bold text-white tracking-wider" style={{ letterSpacing: '0.1em' }}>PATHFINDER</h1>
           <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
             <button
               onClick={() => router.push('/goals')}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import SkillTreeBackground from '../components/SkillTreeBackground';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -119,12 +120,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 p-4 relative overflow-hidden">
+      <SkillTreeBackground />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative z-10"
       >
         <motion.div
           initial={{ opacity: 0 }}
@@ -132,7 +134,9 @@ export default function LoginPage() {
           transition={{ delay: 0.2 }}
           className="text-center mb-8"
         >
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Pathfinder</h1>
+          <h1 className="text-3xl font-bold mb-2 tracking-wider bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent" style={{ letterSpacing: '0.1em' }}>
+            PATHFINDER
+          </h1>
           <p className="text-gray-600">
             {isSignUp ? 'アカウント作成' : 'ログイン'}
           </p>
