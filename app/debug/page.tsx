@@ -8,6 +8,54 @@ export default function DebugPage() {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [error, setError] = useState<string>('');
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteGraph = async () => {
+    if (!user) {
+      alert('ログインしてください');
+      return;
+    }
+
+    if (!confirm('本当にスキルツリーを削除しますか？この操作は取り消せません。')) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      // グラフを取得
+      const { data: graphs } = await supabase
+        .from('graphs')
+        .select('id')
+        .eq('user_id', user.id);
+
+      if (!graphs || graphs.length === 0) {
+        alert('削除するグラフが見つかりません');
+        return;
+      }
+
+      for (const graph of graphs) {
+        // エッジを削除
+        await supabase.from('edges').delete().eq('graph_id', graph.id);
+
+        // ノードを削除
+        await supabase.from('nodes').delete().eq('graph_id', graph.id);
+
+        // グラフを削除
+        await supabase.from('graphs').delete().eq('id', graph.id);
+      }
+
+      // プロファイルを削除
+      await supabase.from('profiles').delete().eq('id', user.id);
+
+      alert('スキルツリーとプロファイルを削除しました。オンボーディングからやり直してください。');
+      window.location.href = '/onboarding';
+    } catch (err: any) {
+      console.error('削除エラー:', err);
+      alert('削除に失敗しました: ' + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -102,7 +150,7 @@ export default function DebugPage() {
           {/* アクション */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">アクション</h2>
-            <div className="space-x-4">
+            <div className="space-x-4 mb-4">
               <a
                 href="/login"
                 className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -121,6 +169,19 @@ export default function DebugPage() {
               >
                 グラフページへ
               </a>
+            </div>
+            <div className="pt-4 border-t">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">危険な操作</h3>
+              <button
+                onClick={handleDeleteGraph}
+                disabled={deleting || !user}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? '削除中...' : '🗑️ スキルツリーとプロファイルを削除'}
+              </button>
+              <p className="text-xs text-gray-500 mt-2">
+                ※この操作は取り消せません。削除後はオンボーディングからやり直せます。
+              </p>
             </div>
           </div>
         </div>

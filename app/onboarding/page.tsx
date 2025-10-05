@@ -70,13 +70,47 @@ export default function OnboardingPage() {
 
       const { classifications } = await classifyResponse.json();
 
-      // プロファイルを作成
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: user.id,
-        answers: answers,
-      });
+      // 既存のプロファイルをチェック
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
 
-      if (profileError) throw profileError;
+      // プロファイルを作成または更新
+      if (existingProfile) {
+        // 既存プロファイルを更新
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ answers: answers })
+          .eq('id', user.id);
+
+        if (profileError) throw profileError;
+      } else {
+        // 新規プロファイルを作成
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            answers: answers,
+          });
+
+        if (profileError) throw profileError;
+      }
+
+      // 既存のグラフを削除（再生成のため）
+      const { data: existingGraphs } = await supabase
+        .from('graphs')
+        .select('id')
+        .eq('user_id', user.id);
+
+      if (existingGraphs && existingGraphs.length > 0) {
+        for (const g of existingGraphs) {
+          await supabase.from('edges').delete().eq('graph_id', g.id);
+          await supabase.from('nodes').delete().eq('graph_id', g.id);
+          await supabase.from('graphs').delete().eq('id', g.id);
+        }
+      }
 
       // グラフを作成
       const { data: graph, error: graphError } = await supabase
@@ -132,10 +166,7 @@ export default function OnboardingPage() {
 
         const { tree } = await generateResponse.json();
 
-        // 現在地ノードを作成
-        const angle = (i / classifications.length) * 2 * Math.PI;
-        const radius = 200;
-
+        // 現在地ノードを作成（位置は後でcalculateRadialLayoutが計算）
         const currentPosNode = {
           graph_id: graph.id,
           node_type: 'current' as const,
@@ -144,8 +175,8 @@ export default function OnboardingPage() {
           required_exp: 0,
           current_exp: 0,
           parent_ids: [createdCenter.id],
-          position_x: Math.cos(angle) * radius,
-          position_y: Math.sin(angle) * radius,
+          position_x: 0,
+          position_y: 0,
           color: '#4A90E2',
           metadata: { category: classification.category },
         };
@@ -170,7 +201,17 @@ export default function OnboardingPage() {
         nodeMap.set(classification.currentPosition, createdCurrent.id);
 
         for (const node of tree.nodes) {
-          const parentIds = node.parentLabels?.map((label) => nodeMap.get(label)).filter(Boolean) as string[] || [createdCurrent.id];
+          // 親ラベルから親IDを取得、見つからない場合は現在地ノードをデフォルトに
+          let parentId: string = createdCurrent.id; // デフォルトは現在地ノード
+
+          if (node.parentLabels && node.parentLabels.length > 0) {
+            // 最初の親のみを使用（ツリー構造を保証）
+            const firstParentLabel = node.parentLabels[0];
+            const foundParentId = nodeMap.get(firstParentLabel);
+            if (foundParentId) {
+              parentId = foundParentId;
+            }
+          }
 
           const colorMap: Record<string, string> = {
             skill: '#7ED321',
@@ -185,9 +226,9 @@ export default function OnboardingPage() {
             description: node.description,
             required_exp: node.requiredExp,
             current_exp: 0,
-            parent_ids: parentIds,
-            position_x: Math.cos(angle) * (radius + 100 * (parentIds.length + 1)),
-            position_y: Math.sin(angle) * (radius + 100 * (parentIds.length + 1)),
+            parent_ids: [parentId], // 単一の親のみ
+            position_x: 0, // 位置はcalculateRadialLayoutが計算
+            position_y: 0,
             color: colorMap[node.nodeType] || '#4A90E2',
             metadata: { suggestedResources: node.suggestedResources || [] },
           };
@@ -201,13 +242,21 @@ export default function OnboardingPage() {
           if (createdNode) {
             nodeMap.set(node.label, createdNode.id);
 
-            // エッジを作成
-            for (const parentId of parentIds) {
-              await supabase.from('edges').insert({
-                graph_id: graph.id,
-                from_node_id: parentId,
-                to_node_id: createdNode.id,
-              });
+            // エッジを作成（単一の親のみ）
+            console.log(`Creating edge for node "${node.label}":`, {
+              nodeId: createdNode.id,
+              parentId,
+              parentLabel: node.parentLabels?.[0],
+            });
+
+            const { error: edgeError } = await supabase.from('edges').insert({
+              graph_id: graph.id,
+              from_node_id: parentId,
+              to_node_id: createdNode.id,
+            });
+
+            if (edgeError) {
+              console.error('Edge creation error:', edgeError);
             }
           }
         }
