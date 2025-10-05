@@ -428,8 +428,25 @@ ${nodesSummary}
     });
   } catch (error) {
     console.error('Goal generation error:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage === 'QUOTA_EXCEEDED' || errorMessage === 'SERVICE_OVERLOADED') {
+      return NextResponse.json(
+        { error: 'サービスが混み合っています。しばらく時間をおいてから再度お試しください。' },
+        { status: 503 }
+      );
+    }
+
+    if (errorMessage === 'DATABASE_QUOTA_EXCEEDED') {
+      return NextResponse.json(
+        { error: 'サービスが混み合っています。しばらく時間をおいてから再度お試しください。' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { error: '目標の生成に失敗しました', details: (error as Error).message },
+      { error: '目標の生成に失敗しました。もう一度お試しください。' },
       { status: 500 }
     );
   }

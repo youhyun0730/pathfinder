@@ -15,7 +15,15 @@ export const createUserProfile = async (
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '42501' || error.message?.includes('quota')) {
+      throw new Error('DATABASE_QUOTA_EXCEEDED');
+    }
+    if (error.code === '23505') {
+      throw new Error('PROFILE_ALREADY_EXISTS');
+    }
+    throw error;
+  }
   return data;
 };
 
@@ -30,7 +38,12 @@ export const createGraph = async (userId: string) => {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '42501' || error.message?.includes('quota')) {
+      throw new Error('DATABASE_QUOTA_EXCEEDED');
+    }
+    throw error;
+  }
   return data;
 };
 
@@ -41,7 +54,12 @@ export const createNodes = async (nodes: Omit<GraphNode, 'id' | 'createdAt'>[]) 
     .insert(nodes)
     .select();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '42501' || error.message?.includes('quota')) {
+      throw new Error('DATABASE_QUOTA_EXCEEDED');
+    }
+    throw error;
+  }
   return data;
 };
 
@@ -57,7 +75,12 @@ export const updateNode = async (
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '42501' || error.message?.includes('quota')) {
+      throw new Error('DATABASE_QUOTA_EXCEEDED');
+    }
+    throw error;
+  }
   return data;
 };
 
@@ -86,7 +109,12 @@ export const deleteNodeAndDescendants = async (nodeId: string, graphId: string) 
     .delete()
     .in('id', allNodeIds);
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '42501' || error.message?.includes('quota')) {
+      throw new Error('DATABASE_QUOTA_EXCEEDED');
+    }
+    throw error;
+  }
   return allNodeIds;
 };
 
@@ -97,7 +125,12 @@ export const createEdges = async (edges: Omit<GraphEdge, 'id'>[]) => {
     .insert(edges)
     .select();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '42501' || error.message?.includes('quota')) {
+      throw new Error('DATABASE_QUOTA_EXCEEDED');
+    }
+    throw error;
+  }
   return data;
 };
 
@@ -119,7 +152,12 @@ export const createGoal = async (
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '42501' || error.message?.includes('quota')) {
+      throw new Error('DATABASE_QUOTA_EXCEEDED');
+    }
+    throw error;
+  }
   return data;
 };
 

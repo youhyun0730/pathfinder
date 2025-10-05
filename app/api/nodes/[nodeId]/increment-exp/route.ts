@@ -87,8 +87,18 @@ export async function POST(
     });
   } catch (error: any) {
     console.error('EXP増加エラー:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage === 'DATABASE_QUOTA_EXCEEDED') {
+      return NextResponse.json(
+        { error: 'サービスが混み合っています。しばらく時間をおいてから再度お試しください。' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { error: error.message || 'サーバーエラー' },
+      { error: 'EXPの更新に失敗しました。もう一度お試しください。' },
       { status: 500 }
     );
   }

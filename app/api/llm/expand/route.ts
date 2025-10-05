@@ -36,8 +36,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Tree expansion error:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage === 'QUOTA_EXCEEDED' || errorMessage === 'SERVICE_OVERLOADED') {
+      return NextResponse.json(
+        { error: 'サービスが混み合っています。しばらく時間をおいてから再度お試しください。' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Failed to expand skill tree' },
+      { error: 'スキルツリーの拡張に失敗しました。もう一度お試しください。' },
       { status: 500 }
     );
   }
