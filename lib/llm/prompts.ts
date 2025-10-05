@@ -1,4 +1,4 @@
-import { OnboardingAnswer, CurrentPositionClassification, GeneratedNode } from '@/types';
+import { OnboardingAnswer, CurrentPositionClassification } from '@/types';
 
 // 現在地分類プロンプト
 export function createClassifyPrompt(answers: OnboardingAnswer[]): string {

@@ -3,7 +3,7 @@
 import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { GraphNode } from '@/types';
-import { FaStar, FaUserCircle, FaLightbulb, FaCertificate, FaBriefcase, FaLock } from 'react-icons/fa';
+import { FaStar, FaUserCircle, FaLightbulb, FaCertificate, FaBriefcase } from 'react-icons/fa';
 
 function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean }>) {
   const [isClicking, setIsClicking] = useState(false);

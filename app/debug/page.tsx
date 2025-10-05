@@ -6,9 +6,9 @@ import Dialog from '@/components/ui/Dialog';
 import Toast from '@/components/ui/Toast';
 
 export default function DebugPage() {
-  const [user, setUser] = useState<any>(null);
-  const [session, setSession] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const [session, setSession] = useState<{ access_token: string; refresh_token: string } | null>(null);
+  const [profile, setProfile] = useState<{ id: string; name: string; graph_id: string } | null>(null);
   const [error, setError] = useState<string>('');
   const [deleting, setDeleting] = useState(false);
   const [dialog, setDialog] = useState<{
@@ -94,11 +94,12 @@ export default function DebugPage() {
       setTimeout(() => {
         window.location.href = '/onboarding';
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('削除エラー:', err);
+      const errorMessage = err instanceof Error ? err.message : '不明なエラー';
       setToast({
         isOpen: true,
-        message: `削除に失敗しました: ${err.message}`,
+        message: `削除に失敗しました: ${errorMessage}`,
         variant: 'error',
       });
     } finally {
@@ -137,9 +138,9 @@ export default function DebugPage() {
             setError('プロファイルが見つかりません（オンボーディング未完了）');
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Debug error:', err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : '不明なエラー');
       }
     };
 

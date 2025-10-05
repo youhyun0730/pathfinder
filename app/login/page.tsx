@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import SkillTreeBackground from '../components/SkillTreeBackground';
 
@@ -12,7 +11,6 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const router = useRouter();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +83,9 @@ export default function LoginPage() {
           }
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('認証エラー:', error);
-      setMessage(error.message || 'エラーが発生しました');
+      setMessage(error instanceof Error ? error.message : 'エラーが発生しました');
     } finally {
       setLoading(false);
     }

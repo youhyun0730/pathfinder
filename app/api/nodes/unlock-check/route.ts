@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // 各ノードのロック状態をチェック
     const updates: { id: string; is_locked: boolean }[] = [];
-    const unlockedNodes: any[] = [];
+    const unlockedNodes: { id: string; title: string }[] = [];
 
     for (const node of nodes) {
       // 中心ノードと現在地ノードは常にアンロック
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       updatedCount: updates.length,
       unlockedNodes,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('ロックチェックエラー:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

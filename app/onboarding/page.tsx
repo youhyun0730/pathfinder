@@ -134,9 +134,6 @@ export default function OnboardingPage() {
 
       if (graphError) throw graphError;
 
-      // 各現在地に対してスキルツリーを生成
-      const allNodes = [];
-      const allEdges = [];
 
       // 中心ノードを作成
       const centerNode = {

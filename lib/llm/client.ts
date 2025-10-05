@@ -27,16 +27,17 @@ export async function generateJSON<T>(prompt: string): Promise<T> {
 
     try {
       return JSON.parse(text) as T;
-    } catch (error) {
+    } catch {
       console.error('Failed to parse JSON response:', text);
       throw new Error('Invalid JSON response from Gemini');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Gemini APIのエラーハンドリング
-    if (error?.status === 429 || error?.message?.includes('quota')) {
+    const err = error as { status?: number; message?: string };
+    if (err?.status === 429 || err?.message?.includes('quota')) {
       throw new Error('QUOTA_EXCEEDED');
     }
-    if (error?.status === 503 || error?.message?.includes('overloaded')) {
+    if (err?.status === 503 || err?.message?.includes('overloaded')) {
       throw new Error('SERVICE_OVERLOADED');
     }
     throw error;
@@ -58,12 +59,13 @@ export async function generateText(prompt: string): Promise<string> {
 
     const response = await result.response;
     return response.text();
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Gemini APIのエラーハンドリング
-    if (error?.status === 429 || error?.message?.includes('quota')) {
+    const err = error as { status?: number; message?: string };
+    if (err?.status === 429 || err?.message?.includes('quota')) {
       throw new Error('QUOTA_EXCEEDED');
     }
-    if (error?.status === 503 || error?.message?.includes('overloaded')) {
+    if (err?.status === 503 || err?.message?.includes('overloaded')) {
       throw new Error('SERVICE_OVERLOADED');
     }
     throw error;

@@ -179,8 +179,8 @@ ${nodesSummary}
     const goalData = JSON.parse(jsonMatch[0]);
     console.log('Parsed goal data:', goalData);
 
-    let startingNode: any;
-    let createdCurrentNode: any = null;
+    let startingNode: { id: string; x: number; y: number } | undefined;
+    let createdCurrentNode: { id: string; x: number; y: number } | null = null;
 
     // Check if we need to create a new current node for a different domain
     if (goalData.needsNewCenter) {

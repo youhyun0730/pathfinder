@@ -78,7 +78,7 @@ export default function SkillTreeBackground() {
       ctx.fillStyle = 'rgba(0, 0, 0, 0)';
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      paths.forEach((path, index) => {
+      paths.forEach((path) => {
         path.progress += path.speed;
 
         // プログレスが完了したらリセット

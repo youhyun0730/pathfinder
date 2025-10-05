@@ -12,7 +12,7 @@ import MaxExpCelebration from '@/components/graph/MaxExpCelebration';
 import Dialog from '@/components/ui/Dialog';
 import Toast from '@/components/ui/Toast';
 import LoadingScreen from '@/components/ui/LoadingScreen';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 // React FlowはクライアントサイドのみでレンダリングするためにSSRを無効化
 const GraphCanvas = dynamic(() => import('@/components/graph/GraphCanvas'), {
@@ -28,12 +28,11 @@ export default function GraphPage() {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     node: GraphNode;
     position: { x: number; y: number };
   } | null>(null);
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [activeGoal, setActiveGoal] = useState<Goal | null>(null);
   const [unlockedNodes, setUnlockedNodes] = useState<GraphNode[]>([]);
   const [maxedNode, setMaxedNode] = useState<GraphNode | null>(null);
@@ -183,7 +182,7 @@ export default function GraphPage() {
           // 既存のノードの位置を保持し、is_lockedのみ更新
           setNodes(prevNodes =>
             prevNodes.map(prevNode => {
-              const updatedNode = graphNodes.find((n: any) => n.id === prevNode.id);
+              const updatedNode = graphNodes.find((n: GraphNode) => n.id === prevNode.id);
               if (updatedNode) {
                 return {
                   ...prevNode,
@@ -283,7 +282,7 @@ export default function GraphPage() {
       for (const newNodeData of expansion.nodes) {
         // 親ラベルから親IDを取得
         const parentLabel = newNodeData.parentLabels?.[0] || node.label;
-        let parentId = nodeMap.get(parentLabel) || node.id;
+        const parentId = nodeMap.get(parentLabel) || node.id;
 
         const newNode = {
           graph_id: graph.id,

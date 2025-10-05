@@ -14,8 +14,7 @@ export default function GoalsPage() {
   const [newGoalDescription, setNewGoalDescription] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [nodes, setNodes] = useState<GraphNode[]>([]);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -146,7 +145,7 @@ export default function GoalsPage() {
         throw new Error('目標の生成に失敗しました');
       }
 
-      const { goal, newNodes, createdNewCenter } = await response.json();
+      const { newNodes, createdNewCenter } = await response.json();
 
       // Reload goals
       const { data: goalsData } = await supabase

@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import { GraphNode, GraphEdge, Goal, OnboardingAnswer } from '@/types';
+import { GraphNode, GraphEdge, OnboardingAnswer } from '@/types';
 
 // プロファイル作成
 export const createUserProfile = async (

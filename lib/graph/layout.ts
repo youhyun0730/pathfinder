@@ -1,11 +1,6 @@
 import { GraphNode, GraphEdge } from '@/types';
 import { stratify, tree } from 'd3-hierarchy';
 
-interface LayoutNode extends GraphNode {
-  level?: number;
-  angle?: number;
-}
-
 /**
  * D3ベースの改良された放射状レイアウトアルゴリズム
  * ツリー構造を最適化して配置し、ノードの重なりを防ぐ
@@ -21,7 +16,6 @@ export function calculateRadialLayout(
   }
 
   // 階層構造を構築
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
   const childrenMap = new Map<string, string[]>();
   const parentMap = new Map<string, string>();
 
