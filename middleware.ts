@@ -46,6 +46,15 @@ export async function middleware(request: NextRequest) {
   console.log('Middleware - User:', user?.email || 'not authenticated');
   console.log('Middleware - Auth Error:', authError?.message || 'none');
 
+  // 本番環境でdebugページへのアクセスを制限
+  if (
+    process.env.NODE_ENV === 'production' &&
+    request.nextUrl.pathname.startsWith('/debug')
+  ) {
+    console.log('→ Redirecting to / (debug page is disabled in production)');
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   // 認証が必要なルートの保護
   if (!user && request.nextUrl.pathname.startsWith('/onboarding')) {
     console.log('→ Redirecting to /login (onboarding requires auth)');
