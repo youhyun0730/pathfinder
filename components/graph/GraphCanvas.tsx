@@ -29,27 +29,40 @@ interface GraphCanvasProps {
 export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNodeClick, onNodeLongPress, highlightedNodeId, onPaneClick, onMove }: GraphCanvasProps) {
   // GraphNodeをReact Flow Nodeに変換
   const initialNodes: Node[] = useMemo(() => {
-    return graphNodes.map((node) => ({
-      id: node.id,
-      type: 'skillNode',
-      position: { x: node.positionX, y: node.positionY },
-      data: {
-        ...node,
-        isHighlighted: node.id === highlightedNodeId,
-      },
-    }));
+    return graphNodes.map((node) => {
+      // centerとcurrentノードは常にアンロック
+      const isCenterOrCurrent = node.nodeType === 'center' || node.nodeType === 'current';
+
+      // ロック状態を計算（parentIdsが存在する場合のみチェック）
+      const parentIds = node.parentIds || [];
+      const isLocked = !isCenterOrCurrent && parentIds.length > 0 && parentIds.some(parentId => {
+        const parentNode = graphNodes.find(n => n.id === parentId);
+        if (!parentNode) return true;
+        const parentCurrentExp = parentNode.currentExp || 0;
+        const parentRequiredExp = parentNode.requiredExp || 100;
+        return parentCurrentExp < parentRequiredExp * 0.5;
+      });
+
+      return {
+        id: node.id,
+        type: 'skillNode',
+        position: { x: node.positionX, y: node.positionY },
+        data: {
+          ...node,
+          isHighlighted: node.id === highlightedNodeId,
+          isLocked,
+        },
+      };
+    });
   }, [graphNodes, highlightedNodeId]);
 
   // GraphEdgeをReact Flow Edgeに変換
   const initialEdges: Edge[] = useMemo(() => {
     return graphEdges.map((edge) => {
-      const sourceId = edge.fromNodeId;
-      const targetId = edge.toNodeId;
-
       return {
         id: edge.id,
-        source: sourceId,
-        target: targetId,
+        source: edge.fromNodeId,
+        target: edge.toNodeId,
         sourceHandle: null, // 中央から接続
         targetHandle: null, // 中央に接続
         type: 'straight',

@@ -5,15 +5,15 @@ import { Handle, Position, NodeProps } from 'reactflow';
 import { GraphNode } from '@/types';
 import { FaStar, FaUserCircle, FaLightbulb, FaCertificate, FaBriefcase } from 'react-icons/fa';
 
-function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean }>) {
+function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; isLocked?: boolean }>) {
   const [isClicking, setIsClicking] = useState(false);
   const currentExp = data.currentExp || 0;
   const requiredExp = data.requiredExp || 100;
   const progress = (currentExp / requiredExp) * 100;
-  const isLocked = data.isLocked || false;
   const isCenter = data.nodeType === 'center';
   const isCurrent = data.nodeType === 'current';
   const isHighlighted = data.isHighlighted || false;
+  const isLocked = data.isLocked || false;
   const nodeType = data.nodeType || 'skill';
   const isMaxed = currentExp >= requiredExp;
 
@@ -39,7 +39,7 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean }>)
   };
 
   const handleMouseDown = () => {
-    if (!isLocked && !isCenter) {
+    if (!isCenter && !isLocked) {
       setIsClicking(true);
     }
   };
@@ -95,15 +95,15 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean }>)
       <div
         className={`
         relative ${nodeSize} rounded-full transition-all duration-300 flex items-center justify-center
-        ${isCenter ? 'cursor-default' : isMaxed ? 'cursor-default' : 'cursor-pointer'}
-        ${isLocked ? 'cursor-not-allowed' : ''}
+        ${isCenter ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : isMaxed ? 'cursor-default' : 'cursor-pointer'}
         ${isCenter ? 'ring-4 ring-yellow-400' : ''}
         ${isHighlighted ? 'ring-8 ring-pink-500 shadow-2xl shadow-pink-500/50' : ''}
         ${isMaxed && !isCenter ? 'ring-4 ring-yellow-300' : ''}
-        ${!isLocked && !isCenter && !isMaxed ? 'hover:scale-110 hover:shadow-xl active:scale-95' : ''}
+        ${!isCenter && !isMaxed && !isLocked ? 'hover:scale-110 hover:shadow-xl active:scale-95' : ''}
+        ${isLocked ? 'opacity-50' : ''}
       `}
         style={{
-          backgroundColor: isLocked ? '#D1D5DB' : data.color,
+          backgroundColor: isLocked ? '#9CA3AF' : data.color,
           zIndex: isHighlighted ? 20 : 10,
           pointerEvents: isCenter || isMaxed ? 'none' : (isClicking ? 'none' : 'auto'),
           animation: isHighlighted
@@ -176,22 +176,20 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean }>)
               cy="50%"
               r={circleRadius}
               fill="none"
-              stroke={isLocked ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.3)"}
+              stroke="rgba(255,255,255,0.3)"
               strokeWidth="3"
             />
-            {!isLocked && (
-              <circle
-                cx="50%"
-                cy="50%"
-                r={circleRadius}
-                fill="none"
-                stroke="white"
-                strokeWidth="3"
-                strokeDasharray={`${2 * Math.PI * circleRadius}`}
-                strokeDashoffset={`${2 * Math.PI * circleRadius * (1 - progress / 100)}`}
-                className="transition-all duration-1000 ease-out"
-              />
-            )}
+            <circle
+              cx="50%"
+              cy="50%"
+              r={circleRadius}
+              fill="none"
+              stroke="white"
+              strokeWidth="3"
+              strokeDasharray={`${2 * Math.PI * circleRadius}`}
+              strokeDashoffset={`${2 * Math.PI * circleRadius * (1 - progress / 100)}`}
+              className="transition-all duration-1000 ease-out"
+            />
           </svg>
         )}
       </div>

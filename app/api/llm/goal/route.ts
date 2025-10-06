@@ -268,7 +268,8 @@ ${nodesSummary}
     }
 
     // Build recommended path starting from the starting node
-    const recommendedPath: string[] = [startingNode.id];
+    // At this point, startingNode is guaranteed to be defined (early return if undefined)
+    const recommendedPath: string[] = [startingNode!.id];
     const colorMap: Record<string, string> = {
       skill: '#7ED321',
       cert: '#9013FE',
@@ -277,7 +278,7 @@ ${nodesSummary}
 
     // Process path steps and create nodes
     let newNodesCount = 0;
-    let lastParentId = startingNode.id;
+    let lastParentId = startingNode!.id;
 
     if (goalData.pathSteps && goalData.pathSteps.length > 0) {
       // Sort steps by stepNumber to ensure correct order

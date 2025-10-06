@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { GraphNode, GraphEdge, Goal } from '@/types';
+import { GraphNode, GraphEdge, Goal, NodeType } from '@/types';
 import { calculateRadialLayout } from '@/lib/graph/layout';
 import dynamic from 'next/dynamic';
 import NodeContextMenu from '@/components/graph/NodeContextMenu';
@@ -24,7 +24,7 @@ const GraphCanvas = dynamic(() => import('@/components/graph/GraphCanvas'), {
   ),
 });
 
-function GraphContent() {
+function GraphPageContent() {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,16 +103,74 @@ function GraphContent() {
           .eq('graph_id', graph.id);
 
         if (graphNodes) {
-          // レイアウト計算
+          // DB形式からTypeScript型に変換
+          type DbNode = {
+            id: string;
+            graph_id: string;
+            node_type: string;
+            label: string;
+            description: string;
+            required_exp: number;
+            current_exp: number;
+            parent_ids: string[];
+            position_x: number;
+            position_y: number;
+            color: string;
+            metadata?: Record<string, unknown>;
+            created_at: string;
+          };
+
+          const convertedNodes: GraphNode[] = (graphNodes as DbNode[]).map((node) => ({
+            id: node.id,
+            graphId: node.graph_id,
+            nodeType: node.node_type as NodeType,
+            label: node.label,
+            description: node.description,
+            requiredExp: node.required_exp,
+            currentExp: node.current_exp,
+            parentIds: node.parent_ids,
+            positionX: node.position_x,
+            positionY: node.position_y,
+            color: node.color,
+            metadata: node.metadata,
+            createdAt: node.created_at,
+          }));
+
+          type DbEdge = {
+            id: string;
+            graph_id: string;
+            from_node_id: string;
+            to_node_id: string;
+          };
+
+          // レイアウト計算 - DBの位置は無視してD3で再計算
           const layoutNodes = calculateRadialLayout(
-            graphNodes as GraphNode[],
-            (graphEdges as GraphEdge[]) || []
+            convertedNodes,
+            (graphEdges as DbEdge[] || []).map((edge) => ({
+              id: edge.id,
+              graphId: edge.graph_id,
+              fromNodeId: edge.from_node_id,
+              toNodeId: edge.to_node_id,
+            }))
           );
           setNodes(layoutNodes);
         }
 
         if (graphEdges) {
-          setEdges(graphEdges as GraphEdge[]);
+          type DbEdge = {
+            id: string;
+            graph_id: string;
+            from_node_id: string;
+            to_node_id: string;
+          };
+
+          const convertedEdges: GraphEdge[] = (graphEdges as DbEdge[]).map((edge) => ({
+            id: edge.id,
+            graphId: edge.graph_id,
+            fromNodeId: edge.from_node_id,
+            toNodeId: edge.to_node_id,
+          }));
+          setEdges(convertedEdges);
         }
 
         // Load goal if goalId is provided
@@ -222,19 +280,10 @@ function GraphContent() {
   };
 
   const handleExpandTree = async () => {
-    if (!contextMenu) return;
+    if (!contextMenu || !user) return;
 
     const node = contextMenu.node;
     setContextMenu(null);
-
-    if (!user) {
-      setToast({
-        isOpen: true,
-        message: 'ユーザー情報が見つかりません',
-        variant: 'error',
-      });
-      return;
-    }
 
     try {
       setLoading(true);
@@ -336,15 +385,59 @@ function GraphContent() {
         .eq('graph_id', graph.id);
 
       if (graphNodes) {
-        const layoutNodes = calculateRadialLayout(
-          graphNodes as GraphNode[],
-          (graphEdges as GraphEdge[]) || []
-        );
-        setNodes(layoutNodes);
-      }
+        // DB形式からTypeScript型に変換
+        type DbNode = {
+          id: string;
+          graph_id: string;
+          node_type: string;
+          label: string;
+          description: string;
+          required_exp: number;
+          current_exp: number;
+          parent_ids: string[];
+          position_x: number;
+          position_y: number;
+          color: string;
+          metadata?: Record<string, unknown>;
+          created_at: string;
+        };
 
-      if (graphEdges) {
-        setEdges(graphEdges as GraphEdge[]);
+        type DbEdge = {
+          id: string;
+          graph_id: string;
+          from_node_id: string;
+          to_node_id: string;
+          created_at: string;
+        };
+
+        const convertedNodes: GraphNode[] = (graphNodes as DbNode[]).map((node) => ({
+          id: node.id,
+          graphId: node.graph_id,
+          nodeType: node.node_type as NodeType,
+          label: node.label,
+          description: node.description,
+          requiredExp: node.required_exp,
+          currentExp: node.current_exp,
+          parentIds: node.parent_ids,
+          positionX: node.position_x,
+          positionY: node.position_y,
+          color: node.color,
+          metadata: node.metadata,
+          createdAt: node.created_at,
+        }));
+
+        const convertedEdges: GraphEdge[] = (graphEdges as DbEdge[] || []).map((edge) => ({
+          id: edge.id,
+          graphId: edge.graph_id,
+          fromNodeId: edge.from_node_id,
+          toNodeId: edge.to_node_id,
+          createdAt: edge.created_at,
+        }));
+
+        // レイアウト計算
+        const layoutNodes = calculateRadialLayout(convertedNodes, convertedEdges);
+        setNodes(layoutNodes);
+        setEdges(convertedEdges);
       }
 
       setToast({
@@ -388,9 +481,7 @@ function GraphContent() {
 
       while (queue.length > 0) {
         const nodeId = queue.shift()!;
-        const childEdges = edges.filter(e =>
-          e.fromNodeId === nodeId
-        );
+        const childEdges = edges.filter(e => e.fromNodeId === nodeId);
 
         childEdges.forEach(edge => {
           const childId = edge.toNodeId;
@@ -434,15 +525,59 @@ function GraphContent() {
         .eq('graph_id', graph.id);
 
       if (graphNodes) {
-        const layoutNodes = calculateRadialLayout(
-          graphNodes as GraphNode[],
-          (graphEdges as GraphEdge[]) || []
-        );
-        setNodes(layoutNodes);
-      }
+        // DB形式からTypeScript型に変換
+        type DbNode = {
+          id: string;
+          graph_id: string;
+          node_type: string;
+          label: string;
+          description: string;
+          required_exp: number;
+          current_exp: number;
+          parent_ids: string[];
+          position_x: number;
+          position_y: number;
+          color: string;
+          metadata?: Record<string, unknown>;
+          created_at: string;
+        };
 
-      if (graphEdges) {
-        setEdges(graphEdges as GraphEdge[]);
+        type DbEdge = {
+          id: string;
+          graph_id: string;
+          from_node_id: string;
+          to_node_id: string;
+          created_at: string;
+        };
+
+        const convertedNodes: GraphNode[] = (graphNodes as DbNode[]).map((node) => ({
+          id: node.id,
+          graphId: node.graph_id,
+          nodeType: node.node_type as NodeType,
+          label: node.label,
+          description: node.description,
+          requiredExp: node.required_exp,
+          currentExp: node.current_exp,
+          parentIds: node.parent_ids,
+          positionX: node.position_x,
+          positionY: node.position_y,
+          color: node.color,
+          metadata: node.metadata,
+          createdAt: node.created_at,
+        }));
+
+        const convertedEdges: GraphEdge[] = (graphEdges as DbEdge[] || []).map((edge) => ({
+          id: edge.id,
+          graphId: edge.graph_id,
+          fromNodeId: edge.from_node_id,
+          toNodeId: edge.to_node_id,
+          createdAt: edge.created_at,
+        }));
+
+        // レイアウト計算
+        const layoutNodes = calculateRadialLayout(convertedNodes, convertedEdges);
+        setNodes(layoutNodes);
+        setEdges(convertedEdges);
       }
 
       setContextMenu(null);
@@ -570,21 +705,34 @@ function GraphContent() {
   };
 
   const handleNodeClick = async (node: GraphNode) => {
-    const isLocked = node.isLocked;
     const currentExp = node.currentExp || 0;
     const requiredExp = node.requiredExp || 100;
     const isMaxed = currentExp >= requiredExp;
+
+    // centerとcurrentノードは常にアンロック
+    const isCenterOrCurrent = node.nodeType === 'center' || node.nodeType === 'current';
+
+    // 親ノードが完了しているかチェック（ロック判定、parentIdsが存在する場合のみ）
+    const parentIds = node.parentIds || [];
+    const isLocked = !isCenterOrCurrent && parentIds.length > 0 && parentIds.some(parentId => {
+      const parentNode = nodes.find(n => n.id === parentId);
+      if (!parentNode) return true; // 親が見つからない場合はロック
+      const parentCurrentExp = parentNode.currentExp || 0;
+      const parentRequiredExp = parentNode.requiredExp || 100;
+      return parentCurrentExp < parentRequiredExp * 0.5; // 親が50%未満ならロック
+    });
 
     console.log('ノードクリック:', {
       label: node.label,
       id: node.id,
       isLocked,
       isMaxed,
+      parentIds: node.parentIds,
       node
     });
 
     if (isLocked) {
-      console.log('ロックされたノードです:', node.label);
+      console.log('ロックされています:', node.label);
       return;
     }
 
@@ -711,17 +859,32 @@ function GraphContent() {
         </div>
 
         {/* コンテキストメニュー */}
-        {contextMenu && (
-          <NodeContextMenu
-            node={contextMenu.node}
-            position={contextMenu.position}
-            onClose={handleContextMenuClose}
-            onExpandTree={handleExpandTree}
-            onDeleteSubtree={handleDeleteSubtree}
-            onResetProgress={handleResetProgress}
-            onCompleteInstantly={handleCompleteInstantly}
-          />
-        )}
+        {contextMenu && (() => {
+          // ロック状態を計算
+          const node = contextMenu.node;
+          const isCenterOrCurrent = node.nodeType === 'center' || node.nodeType === 'current';
+          const parentIds = node.parentIds || [];
+          const isLocked = !isCenterOrCurrent && parentIds.length > 0 && parentIds.some(parentId => {
+            const parentNode = nodes.find(n => n.id === parentId);
+            if (!parentNode) return true;
+            const parentCurrentExp = parentNode.currentExp || 0;
+            const parentRequiredExp = parentNode.requiredExp || 100;
+            return parentCurrentExp < parentRequiredExp * 0.5;
+          });
+
+          return (
+            <NodeContextMenu
+              node={node}
+              position={contextMenu.position}
+              onClose={handleContextMenuClose}
+              onExpandTree={handleExpandTree}
+              onDeleteSubtree={handleDeleteSubtree}
+              onResetProgress={handleResetProgress}
+              onCompleteInstantly={handleCompleteInstantly}
+              isLocked={isLocked}
+            />
+          );
+        })()}
 
         {/* フローティング情報パネル */}
         <motion.div
@@ -790,7 +953,7 @@ function GraphContent() {
 export default function GraphPage() {
   return (
     <Suspense fallback={<LoadingScreen message="スキルツリーを読み込み中..." />}>
-      <GraphContent />
+      <GraphPageContent />
     </Suspense>
   );
 }

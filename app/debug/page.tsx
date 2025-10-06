@@ -66,6 +66,16 @@ export default function DebugPage() {
 
     setDeleting(true);
     try {
+      if (!user) {
+        setToast({
+          isOpen: true,
+          message: 'ログインしてください',
+          variant: 'warning',
+        });
+        setDeleting(false);
+        return;
+      }
+
       // グラフを取得
       const { data: graphs } = await supabase
         .from('graphs')

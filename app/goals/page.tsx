@@ -62,22 +62,6 @@ export default function GoalsPage() {
         if (goalsData) {
           setGoals(goalsData as Goal[]);
         }
-
-        // Load nodes for the graph
-        const { data: graph } = await supabase
-          .from('graphs')
-          .select('id')
-          .eq('user_id', currentUser.id)
-          .order('version', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (graph) {
-          await supabase
-            .from('nodes')
-            .select('*')
-            .eq('graph_id', graph.id);
-        }
       } catch (error) {
         console.error('目標の読み込みエラー:', error);
       } finally {
