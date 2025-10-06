@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Pathfinder - スキルツリーRPG',
+  title: 'Pathfinder',
   description: '人生を可視化されたスキルグラフで捉え、ゲーム感覚で成長を楽しむ',
 };
 
