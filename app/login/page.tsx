@@ -8,6 +8,7 @@ import SkillTreeBackground from '../components/SkillTreeBackground';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -19,25 +20,26 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
+        // パスワード確認チェック
+        if (password !== confirmPassword) {
+          setMessage('パスワードが一致しません');
+          setLoading(false);
+          return;
+        }
+
         // サインアップ
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
         });
 
         if (error) throw error;
 
         if (data.user) {
-          // メール確認が必要かチェック
-          if (data.user.confirmed_at) {
-            setMessage('✅ アカウントが作成されました！ログインしてください。');
-            setIsSignUp(false);
-          } else {
-            setMessage('📧 確認メールを送信しました。メール内のリンクをクリックしてアカウントを有効化してください。');
-          }
+          setMessage('✅ アカウントが作成されました！ログインしてください。');
+          setIsSignUp(false);
+          setPassword('');
+          setConfirmPassword('');
         }
       } else {
         // ログイン
@@ -145,6 +147,24 @@ export default function LoginPage() {
               placeholder="••••••••"
             />
           </div>
+
+          {isSignUp && (
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                パスワード（確認）
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-black"
+                placeholder="••••••••"
+              />
+            </div>
+          )}
 
           {message && (
             <div className={`p-4 rounded-lg ${
