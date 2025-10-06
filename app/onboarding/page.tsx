@@ -177,10 +177,11 @@ export default function OnboardingPage() {
           node_type: 'current' as const,
           label: classification.currentPosition,
           description: classification.reasoning,
-          required_exp: 0,
+          required_exp: 100,
           current_exp: 0,
           parent_ids: [createdCenter.id],
           color: '#4A90E2',
+          is_locked: false,
           metadata: { category: classification.category },
         };
 

@@ -746,7 +746,11 @@ function GraphPageContent() {
 
       const response = await fetch(`/api/nodes/${node.id}/increment-exp`, {
         method: 'POST',
-        cache: 'no-store'
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+        credentials: 'include',
       });
 
       console.log('APIレスポンス:', response.status, response.statusText);
