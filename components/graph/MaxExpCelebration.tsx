@@ -55,7 +55,7 @@ export default function MaxExpCelebration({ node, onClose }: MaxExpCelebrationPr
 
             <div className="bg-white/20 rounded-lg p-4 mb-6">
               <p className="text-white font-semibold">
-                EXP {node.currentExp || node.current_exp} / {node.requiredExp || node.required_exp}
+                EXP {node.currentExp} / {node.requiredExp}
               </p>
               <div className="mt-2 bg-white/30 rounded-full h-3 overflow-hidden">
                 <div className="bg-white h-full w-full" />

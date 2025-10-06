@@ -57,6 +57,16 @@ export default function DebugPage() {
   const performDeleteGraph = async () => {
     setDeleting(true);
     try {
+      if (!user) {
+        setToast({
+          isOpen: true,
+          message: 'ログインしてください',
+          variant: 'warning',
+        });
+        setDeleting(false);
+        return;
+      }
+
       // グラフを取得
       const { data: graphs } = await supabase
         .from('graphs')

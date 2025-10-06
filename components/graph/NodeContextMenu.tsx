@@ -11,6 +11,7 @@ interface NodeContextMenuProps {
   onDeleteSubtree: () => void;
   onResetProgress: () => void;
   onCompleteInstantly: () => void;
+  isLocked?: boolean;
 }
 
 export default function NodeContextMenu({
@@ -21,6 +22,7 @@ export default function NodeContextMenu({
   onDeleteSubtree,
   onResetProgress,
   onCompleteInstantly,
+  isLocked = false,
 }: NodeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -36,9 +38,8 @@ export default function NodeContextMenu({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  const isLocked = node.isLocked || node.is_locked;
-  const currentExp = node.currentExp || node.current_exp || 0;
-  const requiredExp = node.requiredExp || node.required_exp || 100;
+  const currentExp = node.currentExp || 0;
+  const requiredExp = node.requiredExp || 100;
   const progress = (currentExp / requiredExp) * 100;
 
   return (
@@ -58,9 +59,8 @@ export default function NodeContextMenu({
             style={{ backgroundColor: node.color }}
           />
           <span className="text-xs font-semibold text-gray-500 uppercase">
-            {node.nodeType || node.node_type}
+            {node.nodeType}
           </span>
-          {isLocked && <span className="text-xs">🔒</span>}
         </div>
         <h3 className="font-bold text-gray-900 text-sm">{node.label}</h3>
         <div className="mt-2">
@@ -88,7 +88,7 @@ export default function NodeContextMenu({
 
       {/* メニューアイテム */}
       <div className="py-1 border-t border-gray-200">
-        {!isLocked && (node.nodeType !== 'center' && node.node_type !== 'center') && (
+        {node.nodeType !== 'center' && (
           <>
             <button
               onClick={onExpandTree}
@@ -98,7 +98,8 @@ export default function NodeContextMenu({
               <span>ツリーを伸ばす</span>
             </button>
 
-            {progress < 100 && (
+            {/* ロックされていない場合のみ進捗関連ボタンを表示 */}
+            {!isLocked && progress < 100 && (
               <button
                 onClick={onCompleteInstantly}
                 className="w-full text-left px-3 py-2 hover:bg-green-50 rounded-md transition flex items-center gap-2 text-sm text-green-600"
@@ -110,7 +111,7 @@ export default function NodeContextMenu({
           </>
         )}
 
-        {(node.nodeType !== 'center' && node.node_type !== 'center') && (
+        {node.nodeType !== 'center' && (
           <>
             <button
               onClick={onDeleteSubtree}
@@ -120,13 +121,16 @@ export default function NodeContextMenu({
               <span>このツリーを削除</span>
             </button>
 
-            <button
-              onClick={onResetProgress}
-              className="w-full text-left px-3 py-2 hover:bg-orange-50 rounded-md transition flex items-center gap-2 text-sm text-orange-600"
-            >
-              <span>🔄</span>
-              <span>進捗を初期化</span>
-            </button>
+            {/* ロックされていない場合のみ進捗初期化ボタンを表示 */}
+            {!isLocked && (
+              <button
+                onClick={onResetProgress}
+                className="w-full text-left px-3 py-2 hover:bg-orange-50 rounded-md transition flex items-center gap-2 text-sm text-orange-600"
+              >
+                <span>🔄</span>
+                <span>進捗を初期化</span>
+              </button>
+            )}
           </>
         )}
       </div>

@@ -10,7 +10,7 @@ export function calculateRadialLayout(
   edges: GraphEdge[]
 ): GraphNode[] {
   // 中心ノードを見つける
-  const centerNode = nodes.find(n => (n.nodeType || n.node_type) === 'center');
+  const centerNode = nodes.find(n => n.nodeType === 'center');
   if (!centerNode) {
     return calculateGridLayout(nodes);
   }
@@ -20,8 +20,8 @@ export function calculateRadialLayout(
   const parentMap = new Map<string, string>();
 
   edges.forEach(edge => {
-    const sourceId = edge.sourceId || edge.source_id || edge.fromNodeId || edge.from_node_id;
-    const targetId = edge.targetId || edge.target_id || edge.toNodeId || edge.to_node_id;
+    const sourceId = edge.fromNodeId;
+    const targetId = edge.toNodeId;
 
     if (!childrenMap.has(sourceId)) {
       childrenMap.set(sourceId, []);
@@ -71,7 +71,8 @@ export function calculateRadialLayout(
         // 中心ノード
         layoutNodes.push({
           ...graphNode,
-          position: { x: 0, y: 0 },
+          positionX: 0,
+          positionY: 0,
         });
       } else {
         // 角度と半径を計算
@@ -93,7 +94,8 @@ export function calculateRadialLayout(
 
         layoutNodes.push({
           ...graphNode,
-          position: { x, y },
+          positionX: x,
+          positionY: y,
         });
       }
     });
@@ -124,13 +126,12 @@ function adjustForCollisions(nodes: GraphNode[], minDistance: number): GraphNode
         const nodeB = adjustedNodes[j];
 
         // 中心ノードは動かさない
-        if ((nodeA.nodeType || nodeA.node_type) === 'center' ||
-            (nodeB.nodeType || nodeB.node_type) === 'center') {
+        if (nodeA.nodeType === 'center' || nodeB.nodeType === 'center') {
           continue;
         }
 
-        const dx = nodeB.position.x - nodeA.position.x;
-        const dy = nodeB.position.y - nodeA.position.y;
+        const dx = nodeB.positionX - nodeA.positionX;
+        const dy = nodeB.positionY - nodeA.positionY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance < minDistance && distance > 0) {
@@ -138,10 +139,10 @@ function adjustForCollisions(nodes: GraphNode[], minDistance: number): GraphNode
           const angle = Math.atan2(dy, dx);
           const pushDistance = (minDistance - distance) / 2 * pushStrength / iterations;
 
-          nodeA.position.x -= Math.cos(angle) * pushDistance;
-          nodeA.position.y -= Math.sin(angle) * pushDistance;
-          nodeB.position.x += Math.cos(angle) * pushDistance;
-          nodeB.position.y += Math.sin(angle) * pushDistance;
+          nodeA.positionX -= Math.cos(angle) * pushDistance;
+          nodeA.positionY -= Math.sin(angle) * pushDistance;
+          nodeB.positionX += Math.cos(angle) * pushDistance;
+          nodeB.positionY += Math.sin(angle) * pushDistance;
         }
       }
     }
@@ -157,25 +158,27 @@ function calculateRadialLayoutFallback(
   nodes: GraphNode[],
   edges: GraphEdge[]
 ): GraphNode[] {
-  const centerNode = nodes.find(n => (n.nodeType || n.node_type) === 'center');
+  const centerNode = nodes.find(n => n.nodeType === 'center');
   if (!centerNode) {
     return calculateGridLayout(nodes);
   }
 
   const layoutNodes: GraphNode[] = nodes.map(n => ({
     ...n,
-    position: { x: 0, y: 0 }
+    positionX: 0,
+    positionY: 0
   }));
 
   const centerIndex = layoutNodes.findIndex(n => n.id === centerNode.id);
-  layoutNodes[centerIndex].position = { x: 0, y: 0 };
+  layoutNodes[centerIndex].positionX = 0;
+  layoutNodes[centerIndex].positionY = 0;
 
   const childrenMap = new Map<string, string[]>();
   const parentMap = new Map<string, string>();
 
   edges.forEach(edge => {
-    const sourceId = edge.sourceId || edge.source_id || edge.fromNodeId || edge.from_node_id;
-    const targetId = edge.targetId || edge.target_id || edge.toNodeId || edge.to_node_id;
+    const sourceId = edge.fromNodeId;
+    const targetId = edge.toNodeId;
 
     if (!childrenMap.has(sourceId)) {
       childrenMap.set(sourceId, []);
@@ -212,10 +215,8 @@ function calculateRadialLayoutFallback(
       const angleStep = (2 * Math.PI) / nodesAtLevel.length;
       nodesAtLevel.forEach((node, index) => {
         const angle = index * angleStep - Math.PI / 2;
-        node.position = {
-          x: Math.cos(angle) * radius,
-          y: Math.sin(angle) * radius,
-        };
+        node.positionX = Math.cos(angle) * radius;
+        node.positionY = Math.sin(angle) * radius;
         nodeAngles.set(node.id, angle);
       });
     } else if (level > 1) {
@@ -223,10 +224,8 @@ function calculateRadialLayoutFallback(
       nodesAtLevel.forEach(node => {
         const parentId = parentMap.get(node.id);
         const parentAngle = nodeAngles.get(parentId || '') || 0;
-        node.position = {
-          x: Math.cos(parentAngle) * radius,
-          y: Math.sin(parentAngle) * radius,
-        };
+        node.positionX = Math.cos(parentAngle) * radius;
+        node.positionY = Math.sin(parentAngle) * radius;
         nodeAngles.set(node.id, parentAngle);
       });
     }
@@ -246,10 +245,8 @@ export function calculateGridLayout(nodes: GraphNode[]): GraphNode[] {
 
   return nodes.map((node, index) => ({
     ...node,
-    position: {
-      x: (index % cols) * spacing,
-      y: Math.floor(index / cols) * spacing,
-    },
+    positionX: (index % cols) * spacing,
+    positionY: Math.floor(index / cols) * spacing,
   }));
 }
 
@@ -275,8 +272,8 @@ export function calculateForceLayout(
     // 反発力（全ノード間）
     for (let i = 0; i < layoutNodes.length; i++) {
       for (let j = i + 1; j < layoutNodes.length; j++) {
-        const dx = layoutNodes[j].position.x - layoutNodes[i].position.x;
-        const dy = layoutNodes[j].position.y - layoutNodes[i].position.y;
+        const dx = layoutNodes[j].positionX - layoutNodes[i].positionX;
+        const dy = layoutNodes[j].positionY - layoutNodes[i].positionY;
         const distance = Math.sqrt(dx * dx + dy * dy) + 0.1;
         const force = repulsionStrength / (distance * distance);
 
@@ -292,12 +289,12 @@ export function calculateForceLayout(
 
     // 引力（エッジでつながったノード間）
     edges.forEach(edge => {
-      const source = layoutNodes.find(n => n.id === edge.sourceId);
-      const target = layoutNodes.find(n => n.id === edge.targetId);
+      const source = layoutNodes.find(n => n.id === edge.fromNodeId);
+      const target = layoutNodes.find(n => n.id === edge.toNodeId);
       if (!source || !target) return;
 
-      const dx = target.position.x - source.position.x;
-      const dy = target.position.y - source.position.y;
+      const dx = target.positionX - source.positionX;
+      const dy = target.positionY - source.positionY;
       const force = attractionStrength;
 
       const fx = dx * force;
@@ -313,14 +310,15 @@ export function calculateForceLayout(
     layoutNodes.forEach(node => {
       // 中心ノードは固定
       if (node.nodeType === 'center') {
-        node.position = { x: 0, y: 0 };
+        node.positionX = 0;
+        node.positionY = 0;
         node.vx = 0;
         node.vy = 0;
         return;
       }
 
-      node.position.x += node.vx;
-      node.position.y += node.vy;
+      node.positionX += node.vx;
+      node.positionY += node.vy;
       node.vx *= damping;
       node.vy *= damping;
     });
