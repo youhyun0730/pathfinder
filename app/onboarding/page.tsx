@@ -144,8 +144,6 @@ export default function OnboardingPage() {
         required_exp: 0,
         current_exp: 0,
         parent_ids: [],
-        position_x: 0,
-        position_y: 0,
         color: '#FFD700',
         metadata: {},
       };
@@ -182,8 +180,6 @@ export default function OnboardingPage() {
           required_exp: 0,
           current_exp: 0,
           parent_ids: [createdCenter.id],
-          position_x: 0,
-          position_y: 0,
           color: '#4A90E2',
           metadata: { category: classification.category },
         };
@@ -234,8 +230,6 @@ export default function OnboardingPage() {
             required_exp: node.requiredExp,
             current_exp: 0,
             parent_ids: [parentId], // 単一の親のみ
-            position_x: 0, // 位置はcalculateRadialLayoutが計算
-            position_y: 0,
             color: colorMap[node.nodeType] || '#4A90E2',
             metadata: { suggestedResources: node.suggestedResources || [] },
           };
