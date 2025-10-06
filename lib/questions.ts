@@ -15,7 +15,7 @@ export const onboardingQuestions: Question[] = [
   },
   {
     id: 'experience',
-    question: 'あなたの経験年数や習熟度を教えてください',
+    question: '現在の職業における経験年数や習熟度を教えてください',
     type: 'select',
     options: [
       '未経験・これから始める',
