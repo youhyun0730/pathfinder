@@ -59,8 +59,11 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
     const touch = e.touches[0];
     touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
 
+    console.log('タッチ開始:', { label: data.label, x: touch.clientX, y: touch.clientY });
+
     // 500msの長押し検出
     longPressTimerRef.current = setTimeout(() => {
+      console.log('長押し検出!', { label: data.label, hasCallback: !!data.onLongPress });
       // 長押しコールバックを直接呼び出す
       if (data.onLongPress) {
         const mouseEvent = {
@@ -68,7 +71,10 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
           clientY: touch.clientY,
           preventDefault: () => {},
         } as React.MouseEvent;
+        console.log('コールバック呼び出し:', { label: data.label, event: mouseEvent });
         data.onLongPress(data, mouseEvent);
+      } else {
+        console.log('コールバックが見つかりません');
       }
     }, 500);
   };
@@ -82,6 +88,7 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
 
     // 移動距離が10px以上なら長押しをキャンセル
     if (deltaX > 10 || deltaY > 10) {
+      console.log('移動検出 - 長押しキャンセル:', { deltaX, deltaY });
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
@@ -90,6 +97,7 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
   };
 
   const handleTouchEnd = () => {
+    console.log('タッチ終了');
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
