@@ -1,12 +1,13 @@
 'use client';
 
-import { memo, useState, useRef } from 'react';
+import { memo, useState, useRef, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { GraphNode } from '@/types';
-import { FaStar, FaUserCircle, FaLightbulb, FaCertificate, FaBriefcase } from 'react-icons/fa';
+import { FaStar, FaUserCircle, FaLightbulb, FaCertificate, FaBriefcase, FaCog } from 'react-icons/fa';
 
 function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; isLocked?: boolean; onLongPress?: (node: GraphNode, event: React.MouseEvent) => void }>) {
   const [isClicking, setIsClicking] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const currentExp = data.currentExp || 0;
@@ -18,6 +19,16 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
   const isLocked = data.isLocked || false;
   const nodeType = data.nodeType || 'skill';
   const isMaxed = currentExp >= requiredExp;
+
+  // モバイル検出
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // ノードタイプ別のサイズ
   const nodeSize = isCenter ? 'w-60 h-60' : isCurrent ? 'w-40 h-40' : 'w-32 h-32';
@@ -103,6 +114,14 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
       longPressTimerRef.current = null;
     }
     touchStartPosRef.current = null;
+  };
+
+  // 歯車ボタンクリックハンドラー
+  const handleGearClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data.onLongPress) {
+      data.onLongPress(data, e);
+    }
   };
 
   return (
@@ -250,6 +269,17 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
               className="transition-all duration-1000 ease-out"
             />
           </svg>
+        )}
+
+        {/* モバイル版歯車ボタン */}
+        {isMobile && !isCenter && (
+          <button
+            onClick={handleGearClick}
+            className="absolute -top-1 -right-1 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors z-10"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <FaCog className="text-gray-600 text-xs" />
+          </button>
         )}
       </div>
     </>

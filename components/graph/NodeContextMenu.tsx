@@ -1,7 +1,7 @@
 'use client';
 
 import { GraphNode } from '@/types';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface NodeContextMenuProps {
   node: GraphNode;
@@ -25,6 +25,17 @@ export default function NodeContextMenu({
   isLocked = false,
 }: NodeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // モバイル検出
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 外側クリックで閉じる
   useEffect(() => {
@@ -42,15 +53,32 @@ export default function NodeContextMenu({
   const requiredExp = node.requiredExp || 100;
   const progress = (currentExp / requiredExp) * 100;
 
-  return (
-    <div
-      ref={menuRef}
-      className="fixed bg-white rounded-lg shadow-2xl p-2 min-w-[200px] z-50 animate-in fade-in zoom-in duration-200"
-      style={{
+  // モバイルの場合は画面中央に配置
+  const menuStyle = isMobile
+    ? {
+        position: 'fixed' as const,
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+      }
+    : {
+        position: 'fixed' as const,
         left: `${position.x}px`,
         top: `${position.y}px`,
-      }}
-    >
+      };
+
+  return (
+    <>
+      {/* モバイル時の背景オーバーレイ */}
+      {isMobile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
+      )}
+
+      <div
+        ref={menuRef}
+        className="bg-white rounded-lg shadow-2xl p-2 min-w-[200px] z-50 animate-in fade-in zoom-in duration-200"
+        style={menuStyle}
+      >
       {/* ノード情報ヘッダー */}
       <div className="px-3 py-2 border-b border-gray-200">
         <div className="flex items-center gap-2 mb-1">
@@ -135,6 +163,7 @@ export default function NodeContextMenu({
         )}
       </div>
 
-    </div>
+      </div>
+    </>
   );
 }
