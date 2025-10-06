@@ -3,9 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const apiKey = process.env.GEMINI_API_KEY!;
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Gemini 2.5 Flash モデル
+// Gemini 1.5 Flash モデル（より安定した制限）
 export const model = genAI.getGenerativeModel({
-  model: 'gemini-2.0-flash-exp',
+  model: 'gemini-1.5-flash',
 });
 
 // JSON形式で応答を取得
@@ -33,6 +33,9 @@ export async function generateJSON<T>(prompt: string): Promise<T> {
     }
   } catch (error: unknown) {
     // Gemini APIのエラーハンドリング
+    console.error('Gemini API Error (generateJSON):', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+
     const err = error as { status?: number; message?: string };
     if (err?.status === 429 || err?.message?.includes('quota')) {
       throw new Error('QUOTA_EXCEEDED');
