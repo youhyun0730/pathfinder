@@ -1,12 +1,14 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useState, useRef } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { GraphNode } from '@/types';
 import { FaStar, FaUserCircle, FaLightbulb, FaCertificate, FaBriefcase } from 'react-icons/fa';
 
 function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; isLocked?: boolean }>) {
   const [isClicking, setIsClicking] = useState(false);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const currentExp = data.currentExp || 0;
   const requiredExp = data.requiredExp || 100;
   const progress = (currentExp / requiredExp) * 100;
@@ -48,6 +50,52 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
     if (isClicking) {
       setTimeout(() => setIsClicking(false), 600);
     }
+  };
+
+  // タッチイベントハンドラー
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isCenter || isLocked) return;
+
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+
+    // 500msの長押し検出
+    longPressTimerRef.current = setTimeout(() => {
+      // 長押しイベントを発火（contextmenu イベントをシミュレート）
+      const target = e.currentTarget;
+      const syntheticEvent = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+      });
+      target.dispatchEvent(syntheticEvent);
+    }, 500);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPosRef.current || !longPressTimerRef.current) return;
+
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartPosRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchStartPosRef.current.y);
+
+    // 移動距離が10px以上なら長押しをキャンセル
+    if (deltaX > 10 || deltaY > 10) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartPosRef.current = null;
   };
 
   return (
@@ -120,6 +168,10 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
       >
         {/* クリックリップルエフェクト */}
         {isClicking && (

@@ -163,7 +163,7 @@ ${nodesSummary}
 - ステップは論理的な順序で、段階的に難易度が上がるように配置してください`;
 
     // Call Gemini API
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
 
@@ -250,7 +250,8 @@ ${nodesSummary}
         console.error('Starting node not found. Available labels:', existingNodes.map(n => n.label));
         console.error('Looking for:', goalData.startingNodeLabel);
         return NextResponse.json(
-          { error: '起点ノードが見つかりません',
+          {
+            error: '起点ノードが見つかりません',
             availableNodes: existingNodes.map(n => n.label),
             requestedLabel: goalData.startingNodeLabel
           },

@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(apiKey);
 
 // Gemini 1.5 Flash モデル（より安定した制限）
 export const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
+  model: 'gemini-2.5-flash-lite',
 });
 
 // JSON形式で応答を取得
