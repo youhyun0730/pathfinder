@@ -5,7 +5,7 @@ import { Handle, Position, NodeProps } from 'reactflow';
 import { GraphNode } from '@/types';
 import { FaStar, FaUserCircle, FaLightbulb, FaCertificate, FaBriefcase } from 'react-icons/fa';
 
-function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; isLocked?: boolean }>) {
+function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; isLocked?: boolean; onLongPress?: (node: GraphNode, event: React.MouseEvent) => void }>) {
   const [isClicking, setIsClicking] = useState(false);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -61,16 +61,15 @@ function SkillNode({ data }: NodeProps<GraphNode & { isHighlighted?: boolean; is
 
     // 500msの長押し検出
     longPressTimerRef.current = setTimeout(() => {
-      // 長押しイベントを発火（contextmenu イベントをシミュレート）
-      const target = e.currentTarget;
-      const syntheticEvent = new MouseEvent('contextmenu', {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-      });
-      target.dispatchEvent(syntheticEvent);
+      // 長押しコールバックを直接呼び出す
+      if (data.onLongPress) {
+        const mouseEvent = {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          preventDefault: () => {},
+        } as React.MouseEvent;
+        data.onLongPress(data, mouseEvent);
+      }
     }, 500);
   };
 

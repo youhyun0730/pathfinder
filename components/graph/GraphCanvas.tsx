@@ -51,10 +51,11 @@ export default function GraphCanvas({ nodes: graphNodes, edges: graphEdges, onNo
           ...node,
           isHighlighted: node.id === highlightedNodeId,
           isLocked,
+          onLongPress: onNodeLongPress,
         },
       };
     });
-  }, [graphNodes, highlightedNodeId]);
+  }, [graphNodes, highlightedNodeId, onNodeLongPress]);
 
   // GraphEdgeをReact Flow Edgeに変換
   const initialEdges: Edge[] = useMemo(() => {
